@@ -65,7 +65,24 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LibraryPath>..\FreeImage\lib;..\SDL\Windows\lib\x64;$(LibraryPath)</LibraryPath>
+    <ExternalIncludePath>..\FreeImage\Source;..\SDL\Windows\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <IncludePath>..\betsy;$(IncludePath)</IncludePath>
+    <OutDir>$(SolutionDir)$(Platform)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LibraryPath>..\FreeImage\lib;..\SDL\Windows\lib\x64;$(LibraryPath)</LibraryPath>
+    <ExternalIncludePath>..\FreeImage\Source;..\SDL\Windows\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <IncludePath>..\betsy;$(IncludePath)</IncludePath>
+    <OutDir>$(SolutionDir)$(Platform)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">
+    <LibraryPath>..\FreeImage\lib;..\SDL\Windows\lib\x64;$(LibraryPath)</LibraryPath>
+    <ExternalIncludePath>..\FreeImage\Source;..\SDL\Windows\include;$(ExternalIncludePath)</ExternalIncludePath>
+    <IncludePath>..\betsy;$(IncludePath)</IncludePath>
+    <OutDir>$(SolutionDir)$(Platform)\</OutDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -81,6 +98,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">FreeImage.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
@@ -103,6 +121,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">FreeImage.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Tracy'">
@@ -125,10 +144,26 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">FreeImage.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Application.cpp" />
+    <ClCompile Include="..\betsy\AmalgamationEnum.cpp" />
+    <ClCompile Include="..\betsy\betsy\CpuImage.cpp" />
+    <ClCompile Include="..\betsy\betsy\Encoder.cpp" />
+    <ClCompile Include="..\betsy\betsy\EncoderBC1.cpp" />
+    <ClCompile Include="..\betsy\betsy\EncoderBC4.cpp" />
+    <ClCompile Include="..\betsy\betsy\EncoderBC6H.cpp" />
+    <ClCompile Include="..\betsy\betsy\EncoderEAC.cpp" />
+    <ClCompile Include="..\betsy\betsy\EncoderETC1.cpp" />
+    <ClCompile Include="..\betsy\betsy\EncoderETC2.cpp" />
+    <ClCompile Include="..\betsy\betsy\EncoderGL.cpp" />
+    <ClCompile Include="..\betsy\betsy\File\FormatKTX.cpp" />
+    <ClCompile Include="..\betsy\betsy\IncludeParser.cpp" />
+    <ClCompile Include="..\betsy\gl3w.cpp" />
+    <ClCompile Include="..\betsy\PlatformGL.cpp" />
+    <ClCompile Include="..\betsy\sds\sds_fstream.cpp" />
     <ClCompile Include="..\Bitmap.cpp" />
     <ClCompile Include="..\BitmapDownsampled.cpp" />
     <ClCompile Include="..\BlockData.cpp" />
@@ -182,6 +217,29 @@
     <ClCompile Include="..\zlib\zutil.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\betsy\betsy\CpuImage.h" />
+    <ClInclude Include="..\betsy\betsy\Encoder.h" />
+    <ClInclude Include="..\betsy\betsy\EncoderBC1.h" />
+    <ClInclude Include="..\betsy\betsy\EncoderBC4.h" />
+    <ClInclude Include="..\betsy\betsy\EncoderBC6H.h" />
+    <ClInclude Include="..\betsy\betsy\EncoderEAC.h" />
+    <ClInclude Include="..\betsy\betsy\EncoderETC1.h" />
+    <ClInclude Include="..\betsy\betsy\EncoderETC2.h" />
+    <ClInclude Include="..\betsy\betsy\EncoderGL.h" />
+    <ClInclude Include="..\betsy\betsy\File\FormatKTX.h" />
+    <ClInclude Include="..\betsy\betsy\IncludeParser.h" />
+    <ClInclude Include="..\betsy\CmdLineParams.h" />
+    <ClInclude Include="..\betsy\CmdLineParamsEnum.h" />
+    <ClInclude Include="..\betsy\GL\gl3w.h" />
+    <ClInclude Include="..\betsy\GL\glcorearb.h" />
+    <ClInclude Include="..\betsy\GL\glext.h" />
+    <ClInclude Include="..\betsy\GL\glxext.h" />
+    <ClInclude Include="..\betsy\GL\glxtokens-backup.h" />
+    <ClInclude Include="..\betsy\GL\wglext.h" />
+    <ClInclude Include="..\betsy\PlatformGL.h" />
+    <ClInclude Include="..\betsy\sds\sds_algorithm.h" />
+    <ClInclude Include="..\betsy\sds\sds_fstream.h" />
+    <ClInclude Include="..\betsy\sds\sds_fstreamNsud.h" />
     <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\BitmapDownsampled.hpp" />
     <ClInclude Include="..\BlockData.hpp" />
@@ -227,6 +285,11 @@
   <ItemGroup>
     <Object Include="..\zlib\gvmat64.obj" />
     <Object Include="..\zlib\inffasx64.obj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\betsy\betsy\BC1_tables.inl" />
+    <None Include="..\betsy\betsy\ETC1_tables.inl" />
+    <None Include="..\betsy\sds\sds_fstreamNsud.mm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

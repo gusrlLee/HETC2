@@ -16,6 +16,21 @@
     <Filter Include="tracy">
       <UniqueIdentifier>{8faaca6f-c9de-4fb4-aeff-4e8044f675f7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="betsy">
+      <UniqueIdentifier>{44f377ac-a6e5-4882-bf29-5e8c9841d7b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="betsy\betsy">
+      <UniqueIdentifier>{5e7cfb08-c460-4612-9a71-6bd016b281ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="betsy\GL">
+      <UniqueIdentifier>{014530c1-e998-4f8e-8443-cc0b91473901}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="betsy\betsy\File">
+      <UniqueIdentifier>{a66c4e45-a765-4c4d-829b-1ec4041a9557}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="betsy\sds">
+      <UniqueIdentifier>{bc052a58-af58-4958-a255-550b01b0b5c4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\zlib\adler32.c">
@@ -142,6 +157,51 @@
       <Filter>tracy</Filter>
     </ClCompile>
     <ClCompile Include="..\ProcessDxtc.cpp" />
+    <ClCompile Include="..\betsy\AmalgamationEnum.cpp">
+      <Filter>betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\gl3w.cpp">
+      <Filter>betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\PlatformGL.cpp">
+      <Filter>betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\CpuImage.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\Encoder.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\EncoderBC1.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\EncoderBC4.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\EncoderBC6H.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\EncoderEAC.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\EncoderETC1.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\EncoderETC2.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\EncoderGL.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\IncludeParser.cpp">
+      <Filter>betsy\betsy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\betsy\File\FormatKTX.cpp">
+      <Filter>betsy\betsy\File</Filter>
+    </ClCompile>
+    <ClCompile Include="..\betsy\sds\sds_fstream.cpp">
+      <Filter>betsy\sds</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -225,6 +285,75 @@
     </ClInclude>
     <ClInclude Include="..\ForceInline.hpp" />
     <ClInclude Include="..\ProcessDxtc.hpp" />
+    <ClInclude Include="..\betsy\CmdLineParams.h">
+      <Filter>betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\CmdLineParamsEnum.h">
+      <Filter>betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\PlatformGL.h">
+      <Filter>betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\CpuImage.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\Encoder.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\EncoderBC1.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\EncoderBC4.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\EncoderBC6H.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\EncoderEAC.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\EncoderETC1.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\EncoderETC2.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\EncoderGL.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\IncludeParser.h">
+      <Filter>betsy\betsy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\betsy\File\FormatKTX.h">
+      <Filter>betsy\betsy\File</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\GL\gl3w.h">
+      <Filter>betsy\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\GL\glcorearb.h">
+      <Filter>betsy\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\GL\glext.h">
+      <Filter>betsy\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\GL\glxext.h">
+      <Filter>betsy\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\GL\glxtokens-backup.h">
+      <Filter>betsy\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\GL\wglext.h">
+      <Filter>betsy\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\sds\sds_algorithm.h">
+      <Filter>betsy\sds</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\sds\sds_fstream.h">
+      <Filter>betsy\sds</Filter>
+    </ClInclude>
+    <ClInclude Include="..\betsy\sds\sds_fstreamNsud.h">
+      <Filter>betsy\sds</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\gvmat64.obj">
@@ -233,5 +362,16 @@
     <Object Include="..\zlib\inffasx64.obj">
       <Filter>zlib</Filter>
     </Object>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\betsy\betsy\BC1_tables.inl">
+      <Filter>betsy\betsy</Filter>
+    </None>
+    <None Include="..\betsy\betsy\ETC1_tables.inl">
+      <Filter>betsy\betsy</Filter>
+    </None>
+    <None Include="..\betsy\sds\sds_fstreamNsud.mm">
+      <Filter>betsy\sds</Filter>
+    </None>
   </ItemGroup>
 </Project>
