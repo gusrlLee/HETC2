@@ -67,20 +67,20 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LibraryPath>..\FreeImage\lib;..\SDL\Windows\lib\x64;$(LibraryPath)</LibraryPath>
-    <ExternalIncludePath>..\FreeImage\Source;..\SDL\Windows\include;$(ExternalIncludePath)</ExternalIncludePath>
-    <IncludePath>..\betsy;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>..\FreeImage\Source;..\SDL\Windows\include;..\betsy;$(ExternalIncludePath)</ExternalIncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>..\FreeImage\lib;..\SDL\Windows\lib\x64;$(LibraryPath)</LibraryPath>
-    <ExternalIncludePath>..\FreeImage\Source;..\SDL\Windows\include;$(ExternalIncludePath)</ExternalIncludePath>
-    <IncludePath>..\betsy;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>..\FreeImage\Source;..\SDL\Windows\include;..\betsy;$(ExternalIncludePath)</ExternalIncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">
     <LibraryPath>..\FreeImage\lib;..\SDL\Windows\lib\x64;$(LibraryPath)</LibraryPath>
-    <ExternalIncludePath>..\FreeImage\Source;..\SDL\Windows\include;$(ExternalIncludePath)</ExternalIncludePath>
-    <IncludePath>..\betsy;$(IncludePath)</IncludePath>
+    <ExternalIncludePath>..\FreeImage\Source;..\SDL\Windows\include;..\betsy;$(ExternalIncludePath)</ExternalIncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)$(Platform)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -98,7 +98,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">FreeImage.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">FreeImage.lib;opengl32.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
@@ -121,7 +121,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">FreeImage.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">FreeImage.lib;opengl32.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Tracy'">
@@ -144,7 +144,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">FreeImage.lib;SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Tracy|x64'">FreeImage.lib;opengl32.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

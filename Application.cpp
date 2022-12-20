@@ -21,6 +21,21 @@
 #include "TaskDispatch.hpp"
 #include "Timing.hpp"
 
+// betsy GPU header 
+#include "betsy/CmdLineParams.h"
+#include "betsy/CpuImage.h"
+#include "betsy/EncoderETC1.h"
+#include "betsy/EncoderETC2.h"
+#include "betsy/File/FormatKTX.h"
+
+namespace betsy
+{
+    extern void initBetsyPlatform();
+    extern void shutdownBetsyPlatform();
+    extern void pollPlatformWindow();
+}  // namespace betsy
+
+
 struct DebugCallback_t : public DebugLog::Callback
 {
     void OnDebugMessage( const char* msg ) override
@@ -44,8 +59,20 @@ void Usage()
     fprintf( stderr, "  --rgba                 enable RGBA in ETC2 mode (RGB is used by default)\n" );
     fprintf( stderr, "  --disable-heuristics   disable heuristic selector of compression mode\n" );
     fprintf( stderr, "  --dxtc                 use DXT1/DXT5 compression\n" );
-    fprintf( stderr, "  --linear               input data is in linear space (disable sRGB conversion for mips)\n\n" );
+    fprintf( stderr, "  --linear               input data is in linear space (disable sRGB conversion for mips)\n" );
+    fprintf( stderr, "  --betsy-mode           execute BetsyGPU Encoding (with Multi-threading Option)\n\n");
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
+}
+
+// save FTX format file 
+template <typename T>
+void saveToOffData(T& encoder, const char* file_path)
+{
+    betsy::CpuImage downloadImg;
+    encoder.startDownload();
+    encoder.downloadTo(downloadImg);
+    betsy::FormatKTX::save(file_path, downloadImg);
+    downloadImg.data = 0;
 }
 
 int main( int argc, char** argv )
@@ -63,6 +90,7 @@ int main( int argc, char** argv )
     bool dxtc = false;
     bool linearize = true;
     bool useHeuristics = true;
+    bool useBetsy = false;
     const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
@@ -78,7 +106,8 @@ int main( int argc, char** argv )
         OptRgba,
         OptDxtc,
         OptLinear,
-        OptNoHeuristics
+        OptNoHeuristics,
+        OptBetsyMode
     };
 
     struct option longopts[] = {
@@ -87,6 +116,7 @@ int main( int argc, char** argv )
         { "dxtc", no_argument, nullptr, OptDxtc },
         { "linear", no_argument, nullptr, OptLinear },
         { "disable-heuristics", no_argument, nullptr, OptNoHeuristics },
+        { "betsy-mode", no_argument, nullptr, OptBetsyMode },
         {}
     };
 
@@ -135,6 +165,9 @@ int main( int argc, char** argv )
             break;
         case OptNoHeuristics:
             useHeuristics = false;
+        case OptBetsyMode:
+            useBetsy = true;
+            break;
         default:
             break;
         }
@@ -144,6 +177,11 @@ int main( int argc, char** argv )
     {
         printf( "Dithering is disabled in ETC2 mode, as it degrades image quality.\n" );
         dither = false;
+    }
+
+    if ( useBetsy ) {
+        betsy::initBetsyPlatform();
+        betsy::EncoderETC2 encoder;
     }
 
     const char* input = nullptr;
