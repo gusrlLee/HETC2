@@ -90,7 +90,7 @@ int main( int argc, char** argv )
     bool dxtc = false;
     bool linearize = true;
     bool useHeuristics = true;
-    bool useBetsy = false;
+    bool useBetsy = false; // for betsy mode (hyeon add)
     const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
