@@ -1,5 +1,13 @@
 #include "BlockDataGPU.hpp"
 
+#include "betsy/EncoderBC1.h"
+#include "betsy/EncoderBC4.h"
+#include "betsy/EncoderBC6H.h"
+#include "betsy/EncoderEAC.h"
+#include "betsy/EncoderETC1.h"
+#include "betsy/EncoderETC2.h"
+#include "betsy/CpuImage.h"
+
 // save FTX format file 
 template <typename T>
 void saveToOffData(T& encoder, const char* file_path)
@@ -13,22 +21,16 @@ void saveToOffData(T& encoder, const char* file_path)
 
 BlockDataGPU::BlockDataGPU()
 {
-    betsy::initBetsyPlatform();
 	m_Repeat = 1u;
 	m_Quality = 2;
 }
 
-void BlockDataGPU::initGPU() 
-{
-	BYTE highError_block[4 * 4 * 3] = {0,};
-	m_CpuImage = betsy::CpuImage(highError_block, 4 * 4 * 3, 4, 4, 3);
-	m_Encoder.initResources(m_CpuImage, Codec::etc2_rgb, false);
-}
-
 void BlockDataGPU::initGPU(const char* input)
 {
-    m_CpuImage = betsy::CpuImage(input);
-    m_Encoder.initResources(m_CpuImage, Codec::etc2_rgb, false);
+    betsy::CpuImage cpuImage = betsy::CpuImage(input);
+    std::cout << "input = " << input << std::endl;
+    std::cout << "repeat = " << m_Repeat << " qualtiy = " << m_Quality << std::endl;
+    m_Encoder.initResources(cpuImage, Codec::etc2_rgb, false);
 }
 
 void BlockDataGPU::ProcessWithGPU()

@@ -1,6 +1,3 @@
-#ifndef __BLOCKDATA_GPU_HPP__
-#define __BLOCKDATA_GPU_HPP__
-
 #include <mutex>
 #include <stdint.h>
 #include <stdio.h>
@@ -10,12 +7,20 @@
 #include "Bitmap.hpp"
 #include "BlockData.hpp"
 
-// betsy GPU header 
-#include "betsy/CmdLineParams.h"
+#include "GL/glcorearb.h"
+
 #include "betsy/CpuImage.h"
+#include "betsy/EncoderBC1.h"
+#include "betsy/EncoderBC4.h"
+#include "betsy/EncoderBC6H.h"
+#include "betsy/EncoderEAC.h"
 #include "betsy/EncoderETC1.h"
 #include "betsy/EncoderETC2.h"
+
 #include "betsy/File/FormatKTX.h"
+#include "betsy/CmdLineParams.h"
+
+#include "FreeImage.h"
 
 namespace betsy
 {
@@ -39,7 +44,6 @@ public:
 
 	BlockDataGPU();
 
-	void initGPU();
 	void initGPU(const char* input);
 	void ProcessWithGPU();
 
@@ -54,4 +58,3 @@ private:
 
 typedef std::shared_ptr<BlockDataGPU> BlockDataGPUPtr;
 
-#endif

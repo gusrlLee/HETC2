@@ -27,7 +27,6 @@
 
 #include "BlockDataGPU.hpp"
 
-
 template <typename T>
 void saveToOffData(T& encoder, const char* file_path)
 {
@@ -372,6 +371,21 @@ int main( int argc, char** argv )
             out->Write(output);
         }
     }
+    else if (useBetsy)
+    {
+        betsy::initBetsyPlatform();
+
+        auto start = GetTime();
+        auto end = GetTime();
+        printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
+        auto bdg = std::make_shared<BlockDataGPU>();
+        bdg->initGPU(input);
+
+        start = GetTime();
+        bdg->ProcessWithGPU();
+        end = GetTime();
+        printf("betsy compute time: %0.3f ms\n", (end - start) / 1000.f);
+    }
     else
     {
         DataProvider dp( input, mipmap, !dxtc, linearize );
@@ -440,17 +454,6 @@ int main( int argc, char** argv )
             }
         }
         TaskDispatch::Sync();
-
-        if (useBetsy)
-        {
-            auto start = GetTime();
-            betsy::initBetsyPlatform();
-            auto end = GetTime();
-            printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
-            auto bdg = std::make_shared<BlockDataGPU>();
-            bdg->initGPU(input);
-            bdg->ProcessWithGPU();
-        }
 
         if( stats )
         {

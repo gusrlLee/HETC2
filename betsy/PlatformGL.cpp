@@ -25,12 +25,13 @@ namespace betsy
 
 	void initBetsyPlatform()
 	{
-		if( SDL_Init( SDL_INIT_VIDEO ) != 0 )
+		 if( SDL_Init( SDL_INIT_VIDEO ) != 0 )
 		{
 			fprintf( stderr, "Error initializing SDL\n" );
 			SDL_Quit();
 			abort();
 		}
+
 
 		FreeImage_Initialise( TRUE );
 
