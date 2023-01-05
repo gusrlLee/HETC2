@@ -25,19 +25,18 @@
 #include "TaskDispatch.hpp"
 #include "Timing.hpp"
 
-// betsy GPU header 
-#include "betsy/CmdLineParams.h"
-#include "betsy/CpuImage.h"
-#include "betsy/EncoderETC1.h"
-#include "betsy/EncoderETC2.h"
-#include "betsy/File/FormatKTX.h"
+#include "BlockDataGPU.hpp"
 
-namespace betsy
+
+template <typename T>
+void saveToOffData(T& encoder, const char* file_path)
 {
-    extern void initBetsyPlatform();
-    extern void shutdownBetsyPlatform();
-    extern void pollPlatformWindow();
-}  // namespace betsy
+    betsy::CpuImage downloadImg;
+    encoder.startDownload();
+    encoder.downloadTo(downloadImg);
+    betsy::FormatKTX::save(file_path, downloadImg);
+    downloadImg.data = 0;
+}
 
 
 struct DebugCallback_t : public DebugLog::Callback
@@ -67,18 +66,6 @@ void Usage()
     fprintf( stderr, "  --betsy-mode           execute BetsyGPU Encoding (with Multi-threading Option)\n\n");
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
-
-// save FTX format file 
-template <typename T>
-void saveToOffData(T& encoder, const char* file_path)
-{
-    betsy::CpuImage downloadImg;
-    encoder.startDownload();
-    encoder.downloadTo(downloadImg);
-    betsy::FormatKTX::save(file_path, downloadImg);
-    downloadImg.data = 0;
-}
-
 
 int isFileOrDir(_finddata_t fd)
 {
@@ -193,11 +180,6 @@ int main( int argc, char** argv )
     {
         printf( "Dithering is disabled in ETC2 mode, as it degrades image quality.\n" );
         dither = false;
-    }
-
-    if ( useBetsy ) {
-        betsy::initBetsyPlatform();
-        betsy::EncoderETC2 encoder;
     }
 
     const char* input = nullptr;
@@ -457,8 +439,18 @@ int main( int argc, char** argv )
                 }
             }
         }
-
         TaskDispatch::Sync();
+
+        if (useBetsy)
+        {
+            auto start = GetTime();
+            betsy::initBetsyPlatform();
+            auto end = GetTime();
+            printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
+            auto bdg = std::make_shared<BlockDataGPU>();
+            bdg->initGPU(input);
+            bdg->ProcessWithGPU();
+        }
 
         if( stats )
         {

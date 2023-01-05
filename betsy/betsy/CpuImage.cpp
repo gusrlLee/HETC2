@@ -150,6 +150,153 @@ namespace betsy
 
 		FreeImage_Unload( fiBitmap );
 	}
+	// Hyeon add ===============================================================================================================
+	//-------------------------------------------------------------------------
+	CpuImage::CpuImage(BYTE image_block[], const int array_size, const int block_width, const int block_height, const int block_channel) :
+		data(0),
+		width(0),
+		height(0),
+		format(PFG_RGBA16_FLOAT)
+	{
+		// for debug 
+		// printf("start make block image\n");
+		// const FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilename( fullpath );
+		// if (fif == FIF_UNKNOWN) printf("[File Type] = FIF_UNKNOWN\n");
+
+		// // file type ¿¡ µû¸¥ load image define 
+		// FIBITMAP *fiBitmap = FreeImage_Load( fif, fullpath );
+
+
+		FIBITMAP* bitmap = FreeImage_Allocate(block_width, block_height, block_channel);
+		FIBITMAP* fiBitmap = FreeImage_ConvertFromRawBits(image_block, block_width, block_height, block_width * block_channel, 8 * block_channel, 0, 0, 0, false);
+		if (fiBitmap == NULL)
+		{
+			fprintf(stderr, "Failed to make block image\n");
+			return;
+		}
+
+		// Must derive format first, this may perform conversions
+		const FREE_IMAGE_TYPE imageType = FreeImage_GetImageType(fiBitmap);
+		const FREE_IMAGE_COLOR_TYPE colourType = FreeImage_GetColorType(fiBitmap);
+		unsigned bpp = FreeImage_GetBPP(fiBitmap);
+
+		switch (imageType)
+		{
+		case FIT_UNKNOWN:
+		case FIT_COMPLEX:
+		case FIT_DOUBLE:
+			printf("Unknown or unsupported image format this image \n");
+			return;
+		case FIT_BITMAP:
+			// Standard image type
+			// Perform any colour conversions for greyscale
+			if (colourType == FIC_MINISWHITE || colourType == FIC_MINISBLACK)
+			{
+				FIBITMAP* newBitmap = FreeImage_ConvertToGreyscale(fiBitmap);
+				// free old bitmap and replace
+				FreeImage_Unload(fiBitmap);
+				fiBitmap = newBitmap;
+				// get new formats
+				bpp = FreeImage_GetBPP(fiBitmap);
+			}
+			// Perform any colour conversions for RGB
+			else if (bpp < 8 || colourType == FIC_PALETTE || colourType == FIC_CMYK)
+			{
+				FIBITMAP* newBitmap = NULL;
+				if (FreeImage_IsTransparent(fiBitmap))
+				{
+					// convert to 32 bit to preserve the transparency
+					// (the alpha byte will be 0 if pixel is transparent)
+					newBitmap = FreeImage_ConvertTo32Bits(fiBitmap);
+				}
+				else
+				{
+					// no transparency - only 3 bytes are needed
+					newBitmap = FreeImage_ConvertTo24Bits(fiBitmap);
+				}
+
+				// free old bitmap and replace
+				FreeImage_Unload(fiBitmap);
+				fiBitmap = newBitmap;
+				// get new formats
+				bpp = FreeImage_GetBPP(fiBitmap);
+			}
+
+			// by this stage, 8-bit is greyscale, 16/24/32 bit are RGB[A]
+			switch (bpp)
+			{
+			case 8:
+				printf("8 bpp Monochrome textures not supported");
+				return;
+			case 16:
+				printf("16 bpp textures not supported");
+				return;
+			case 24:
+			case 32:
+				format = PFG_RGBA8_UNORM_SRGB;
+				break;
+			}
+			break;
+		case FIT_UINT16:
+		case FIT_INT16:
+			// 16-bit greyscale
+			printf("16 bpp Monochrome textures not supported");
+			return;
+		case FIT_UINT32:
+		case FIT_INT32:
+			printf("32 bpp Monochrome textures not supported");
+			break;
+		case FIT_FLOAT:
+			// Single-component floating point data
+			format = PFG_RGBA32_FLOAT;
+			break;
+		case FIT_RGB16:
+		case FIT_RGBA16:
+			printf("Texture format not supported");
+			return;
+		case FIT_RGBF:
+			format = PFG_RGBA32_FLOAT;
+			break;
+		case FIT_RGBAF:
+			format = PFG_RGBA32_FLOAT;
+			break;
+		}
+		// only support RGBAF
+
+		width = FreeImage_GetWidth(fiBitmap);
+		height = FreeImage_GetHeight(fiBitmap);
+
+		const size_t neededBytes = getSizeBytes(width, height, 1u, 1u, format);
+		data = reinterpret_cast<uint8_t*>(malloc(neededBytes));
+
+		// Convert data inverting scanlines
+		const size_t bytesPerRow = FreeImage_GetPitch(fiBitmap);
+		const uint8_t* srcData = FreeImage_GetBits(fiBitmap);
+
+		switch (imageType)
+		{
+		case FIT_BITMAP:
+			if (bpp == 24)
+				RGB8toRGBA8(srcData, bytesPerRow);
+			else if (bpp == 32)
+				BGRANtoRGBAN(srcData, bytesPerRow);
+			break;
+		case FIT_FLOAT:
+			R32toRGBA32(reinterpret_cast<const uint32_t*>(srcData), bytesPerRow);
+			break;
+		case FIT_RGBF:
+			RGB32toRGBA32(reinterpret_cast<const uint32_t*>(srcData), bytesPerRow);
+			break;
+		case FIT_RGBAF:
+			BGRANtoRGBAN<uint32_t>(reinterpret_cast<const uint32_t*>(srcData), bytesPerRow);
+			break;
+		default:
+			break;
+		}
+
+		FreeImage_Unload(fiBitmap);
+	}
+	// Hyeon add ===============================================================================================================
 	//-------------------------------------------------------------------------
 	CpuImage::~CpuImage()
 	{

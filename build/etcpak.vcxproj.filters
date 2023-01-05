@@ -202,6 +202,7 @@
     <ClCompile Include="..\betsy\sds\sds_fstream.cpp">
       <Filter>betsy\sds</Filter>
     </ClCompile>
+    <ClCompile Include="..\BlockDataGPU.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -241,7 +242,6 @@
     <ClInclude Include="..\Vector.hpp" />
     <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\Debug.hpp" />
-    <ClInclude Include="..\BlockData.hpp" />
     <ClInclude Include="..\ColorSpace.hpp" />
     <ClInclude Include="..\Error.hpp" />
     <ClInclude Include="..\Semaphore.hpp" />
@@ -354,6 +354,7 @@
     <ClInclude Include="..\betsy\sds\sds_fstreamNsud.h">
       <Filter>betsy\sds</Filter>
     </ClInclude>
+    <ClInclude Include="..\BlockDataGPU.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\gvmat64.obj">

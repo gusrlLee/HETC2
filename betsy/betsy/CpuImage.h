@@ -15,6 +15,7 @@ namespace betsy
 
 		CpuImage();
 		CpuImage( const char *fullpath );
+		CpuImage(BYTE image_block[], const int array_size, const int block_width, const int block_height, const int block_channel);
 		~CpuImage();
 
 		static size_t getBytesPerPixel( PixelFormat format );

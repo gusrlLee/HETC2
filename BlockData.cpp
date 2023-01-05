@@ -288,6 +288,7 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
     }
 }
 
+
 namespace
 {
 
@@ -690,6 +691,7 @@ static etcpak_force_inline void DecodePlanarAlpha( uint64_t block, uint64_t alph
 }
 
 }
+
 
 BitmapPtr BlockData::Decode()
 {
