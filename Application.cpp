@@ -4,6 +4,10 @@
 #include <math.h>
 #include <memory>
 #include <string.h>
+#include <iostream>
+#include <io.h>
+#include <list>
+#include <sys/stat.h>
 
 #ifdef _MSC_VER
 #  include "getopt/getopt.h"
@@ -75,6 +79,17 @@ void saveToOffData(T& encoder, const char* file_path)
     downloadImg.data = 0;
 }
 
+
+int isFileOrDir(_finddata_t fd)
+{
+
+    if (fd.attrib & _A_SUBDIR)
+        return 0;
+    else
+        return 1;
+
+}
+
 int main( int argc, char** argv )
 {
     DebugLog::AddCallback( &DebugCallback );
@@ -91,6 +106,7 @@ int main( int argc, char** argv )
     bool linearize = true;
     bool useHeuristics = true;
     bool useBetsy = false; // for betsy mode (hyeon add)
+    bool isTargetDir = false;
     const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
@@ -207,6 +223,39 @@ int main( int argc, char** argv )
         input = argv[optind];
         output = argv[optind+1];
     }
+
+    // hyeon add for target directory
+    struct _finddata_t fd;
+    int checkFileOrDir = 0;
+    intptr_t handle;
+    std::vector<std::string> texture_list;
+
+    if ((handle = _findfirst(input, &fd)) == -1L)
+    {
+        std::cout << "No file in directory!" << std::endl;
+        return 0;
+    }
+
+    checkFileOrDir = isFileOrDir(fd);
+    if (checkFileOrDir == 0 && fd.name[0] != '.') {
+        isTargetDir = true;
+        int result = 1;
+        std::string input_dir = input;
+        handle = _findfirst((input_dir + "/*.*").c_str(), &fd);
+
+        while (result != -1 ) // find texture file 
+        {
+            if (fd.name[0] != '.') { // avoid hide file 
+                std::cout << "image = " << fd.name << std::endl;
+                texture_list.push_back(input_dir + "/" + fd.name);
+            }
+            result = _findnext(handle, &fd);
+        }
+    }
+    _findclose(handle);
+    // for check file name 
+    //std::cout << "texture count : " << texture_list.size() << std::endl;
+    //std::cout << "example data : " << texture_list[2] << std::endl;
 
     if( benchmark )
     {
@@ -330,9 +379,16 @@ int main( int argc, char** argv )
     }
     else if( viewMode )
     {
-        auto bd = std::make_shared<BlockData>( input );
-        auto out = bd->Decode();
-        out->Write( output );
+        if (isTargetDir)
+        {
+            std::cout << "Check Result directory" << std::endl;
+        }
+        else
+        {
+            auto bd = std::make_shared<BlockData>(input);
+            auto out = bd->Decode();
+            out->Write(output);
+        }
     }
     else
     {
