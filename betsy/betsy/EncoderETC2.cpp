@@ -38,15 +38,33 @@ namespace betsy
 		m_pModeError = createTexture( TextureParams( getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
 													 "m_pModeError", TextureFlags::Uav ) );
 
-		m_thModesPso = createComputePsoFromFile( "etc2_th.glsl", "../Data/" );
-		m_thModesFindBestC0C1 =
-			createComputePsoFromFile( "etc2_th_find_best_c0c1_k_means.glsl", "../Data/" );
-		m_pModePso = createComputePsoFromFile( "etc2_p.glsl", "../Data/" );
+		// compile shader 
+		//m_thModesPso = createComputePsoFromFile( "etc2_th.glsl", "../Data/" );
+		//m_thModesFindBestC0C1 =
+		//	createComputePsoFromFile( "etc2_th_find_best_c0c1_k_means.glsl", "../Data/" );
+		//m_pModePso = createComputePsoFromFile( "etc2_p.glsl", "../Data/" );
 
-		if( bCompressAlpha )
-			m_stitchPso = createComputePsoFromFile( "etc2_rgba_selector.glsl", "../Data/" );
+		//if( bCompressAlpha )
+		//	m_stitchPso = createComputePsoFromFile( "etc2_rgba_selector.glsl", "../Data/" );
+		//else
+		//	m_stitchPso = createComputePsoFromFile( "etc2_rgb_selector.glsl", "../Data/" );
+	}
+	//-------------------------------------------------------------------------
+	void EncoderETC2::encoderShaderCompile(const bool bCompressAlpha, const bool bDither)
+	{
+		// init ETC1 shader
+		EncoderETC1::encoderShaderCompile( bCompressAlpha, bDither, true );
+
+		// init ETC2 shader
+		m_thModesPso = createComputePsoFromFile("etc2_th.glsl", "../Data/");
+		m_thModesFindBestC0C1 =
+			createComputePsoFromFile("etc2_th_find_best_c0c1_k_means.glsl", "../Data/");
+		m_pModePso = createComputePsoFromFile("etc2_p.glsl", "../Data/");
+
+		if (bCompressAlpha)
+			m_stitchPso = createComputePsoFromFile("etc2_rgba_selector.glsl", "../Data/");
 		else
-			m_stitchPso = createComputePsoFromFile( "etc2_rgb_selector.glsl", "../Data/" );
+			m_stitchPso = createComputePsoFromFile("etc2_rgb_selector.glsl", "../Data/");
 	}
 	//-------------------------------------------------------------------------
 	void EncoderETC2::deinitResources()

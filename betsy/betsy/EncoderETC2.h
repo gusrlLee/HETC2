@@ -37,6 +37,7 @@ namespace betsy
 			Use Floyd-steinberg dithering. Anti-banding method.
 		*/
 		void initResources( const CpuImage &srcImage, const bool bCompressAlpha, const bool bDither );
+		void encoderShaderCompile(const bool bCompressAlpha, const bool bDither);
 		void deinitResources();
 
 		void execute00();

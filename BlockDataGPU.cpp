@@ -8,6 +8,8 @@
 #include "betsy/EncoderETC2.h"
 #include "betsy/CpuImage.h"
 
+#include "Timing.hpp"
+
 // save FTX format file 
 template <typename T>
 void saveToOffData(T& encoder, const char* file_path)
@@ -25,17 +27,23 @@ BlockDataGPU::BlockDataGPU()
 	m_Quality = 2;
 }
 
+void BlockDataGPU::setEncodingEnv()
+{
+    m_Encoder.encoderShaderCompile(Codec::etc2_rgb, false);
+}
+
 void BlockDataGPU::initGPU(const char* input)
 {
     betsy::CpuImage cpuImage = betsy::CpuImage(input);
-    std::cout << "input = " << input << std::endl;
-    std::cout << "repeat = " << m_Repeat << " qualtiy = " << m_Quality << std::endl;
     m_Encoder.initResources(cpuImage, Codec::etc2_rgb, false);
+    glFinish(); // wait initResource
 }
 
 void BlockDataGPU::ProcessWithGPU()
 {
     printf("start Encoding in GPU\n");
+
+    auto start = GetTime();
     while (m_Repeat--)
     {
         // if write while loop, segementation fault so, twice write excute method 
@@ -44,8 +52,14 @@ void BlockDataGPU::ProcessWithGPU()
         m_Encoder.execute02();
     }
 
-    saveToOffData(m_Encoder, "betsy_out.ktx");
+
+    // for checking betsy output
+    // saveToOffData(m_Encoder, "betsy_out.ktx");
     m_Encoder.deinitResources();
+    glFinish();
+
+    auto end = GetTime();
+    printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
     printf("End betsy GPU mode \n");
 }
 

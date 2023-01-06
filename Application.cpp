@@ -5,7 +5,8 @@
 #include <memory>
 #include <string.h>
 #include <iostream>
-#include <io.h>
+#include <io.h> // file handle
+#include <direct.h> // for make directory
 #include <list>
 #include <sys/stat.h>
 
@@ -209,7 +210,7 @@ int main( int argc, char** argv )
     struct _finddata_t fd;
     int checkFileOrDir = 0;
     intptr_t handle;
-    std::vector<std::string> texture_list;
+    std::vector<std::string> imagePathList;
 
     if ((handle = _findfirst(input, &fd)) == -1L)
     {
@@ -227,16 +228,15 @@ int main( int argc, char** argv )
         while (result != -1 ) // find texture file 
         {
             if (fd.name[0] != '.') { // avoid hide file 
-                std::cout << "image = " << fd.name << std::endl;
-                texture_list.push_back(input_dir + "/" + fd.name);
+                imagePathList.push_back(fd.name);
             }
             result = _findnext(handle, &fd);
         }
     }
     _findclose(handle);
     // for check file name 
-    //std::cout << "texture count : " << texture_list.size() << std::endl;
-    //std::cout << "example data : " << texture_list[2] << std::endl;
+    //std::cout << "texture count : " << imagePathList.size() << std::endl;
+    //std::cout << "example data : " << imagePathList[2] << std::endl;
 
     if( benchmark )
     {
@@ -371,20 +371,195 @@ int main( int argc, char** argv )
             out->Write(output);
         }
     }
-    else if (useBetsy)
+    else if ( useBetsy )
     {
         betsy::initBetsyPlatform();
-
-        auto start = GetTime();
-        auto end = GetTime();
-        printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
         auto bdg = std::make_shared<BlockDataGPU>();
-        bdg->initGPU(input);
+        TaskDispatch taskDispatch(cpus);
 
-        start = GetTime();
+
+        // CPU encoding with Multi processing 
+        //-------------------------------------------------------------------------
+
+        // Target directroy
+        if ( isTargetDir ) 
+        {
+            if ((handle = _findfirst(output, &fd)) == -1L)
+            {
+                std::cout << "Make output directory : " << output << std::endl;
+                mkdir(output);
+            }
+
+            for (int i = 0; i < imagePathList.size(); i++)
+            {   
+                std::string inputDir = input;
+                std::string outputDir = output;
+                std::string outputElement;
+                if (outputDir.at(outputDir.length()-1) == '/')
+                {
+                    outputElement = outputDir + "compressed_" + imagePathList[i];
+                }
+                else
+                {
+                    outputElement = outputDir + "/compressed_" + imagePathList[i];
+                }
+                std::cout << "hello world" << std::endl;
+
+                outputElement.replace(outputElement.end() - 3, outputElement.end(), "ktx");
+                std::cout << "Create! : " << outputElement << std::endl;
+
+                DataProvider dp((inputDir + "/" + imagePathList[i]).c_str(), mipmap, !dxtc, linearize);
+                auto num = dp.NumberOfParts();
+
+                BlockData::Type type;
+                if (etc2)
+                {
+                    if (rgba && dp.Alpha())
+                    {
+                        type = BlockData::Etc2_RGBA;
+                    }
+                    else
+                    {
+                        type = BlockData::Etc2_RGB;
+                    }
+                }
+                else if (dxtc)
+                {
+                    if (dp.Alpha())
+                    {
+                        type = BlockData::Dxt5;
+                    }
+                    else
+                    {
+                        type = BlockData::Dxt1;
+                    }
+                }
+                else
+                {
+                    type = BlockData::Etc1;
+                }
+
+                auto bd = std::make_shared<BlockData>(outputElement.c_str(), dp.Size(), mipmap, type);
+                BlockDataPtr bda;
+                if (alpha && dp.Alpha() && !rgba)
+                {
+                    bda = std::make_shared<BlockData>(alpha, dp.Size(), mipmap, type);
+                }
+
+                auto start = GetTime();
+                for (int i = 0; i < num; i++)
+                {
+                    auto part = dp.NextPart();
+
+                    if (type == BlockData::Etc2_RGBA || type == BlockData::Dxt5)
+                    {
+                        TaskDispatch::Queue([part, i, &bd, &dither, useHeuristics]()
+                            {
+                                bd->ProcessRGBA(part.src, part.width / 4 * part.lines, part.offset, part.width, useHeuristics);
+                            });
+                    }
+                    else
+                    {
+                        TaskDispatch::Queue([part, i, &bd, &dither, useHeuristics]()
+                            {
+                                bd->Process(part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, useHeuristics);
+                            });
+                        if (bda)
+                        {
+                            TaskDispatch::Queue([part, i, &bda, useHeuristics]()
+                                {
+                                    bda->Process(part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false, useHeuristics);
+                                });
+                        }
+                    }
+                }
+                TaskDispatch::Sync();
+            }
+        }
+        // target file 
+        else
+        {
+            DataProvider dp(input, mipmap, !dxtc, linearize);
+            auto num = dp.NumberOfParts();
+
+            BlockData::Type type;
+            if (etc2)
+            {
+                if (rgba && dp.Alpha())
+                {
+                    type = BlockData::Etc2_RGBA;
+                }
+                else
+                {
+                    type = BlockData::Etc2_RGB;
+                }
+            }
+            else if (dxtc)
+            {
+                if (dp.Alpha())
+                {
+                    type = BlockData::Dxt5;
+                }
+                else
+                {
+                    type = BlockData::Dxt1;
+                }
+            }
+            else
+            {
+                type = BlockData::Etc1;
+            }
+            auto start = GetTime();
+            auto bd = std::make_shared<BlockData>(output, dp.Size(), mipmap, type);
+            BlockDataPtr bda;
+            if (alpha && dp.Alpha() && !rgba)
+            {
+                bda = std::make_shared<BlockData>(alpha, dp.Size(), mipmap, type);
+            }
+
+
+            for (int i = 0; i < num; i++)
+            {
+                auto part = dp.NextPart();
+
+                if (type == BlockData::Etc2_RGBA || type == BlockData::Dxt5)
+                {
+                    TaskDispatch::Queue([part, i, &bd, &dither, useHeuristics]()
+                        {
+                            bd->ProcessRGBA(part.src, part.width / 4 * part.lines, part.offset, part.width, useHeuristics);
+                        });
+                }
+                else
+                {
+                    TaskDispatch::Queue([part, i, &bd, &dither, useHeuristics]()
+                        {
+                            bd->Process(part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, useHeuristics);
+                        });
+                    if (bda)
+                    {
+                        TaskDispatch::Queue([part, i, &bda, useHeuristics]()
+                            {
+                                bda->Process(part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false, useHeuristics);
+                            });
+                    }
+                }
+            }
+            TaskDispatch::Sync();
+            auto end = GetTime();
+            printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
+        }
+
+        
+        // GPU encoding
+        //-------------------------------------------------------------------------
+        auto start = GetTime();
+        bdg->setEncodingEnv();
+        bdg->initGPU(input);
+        auto    end = GetTime();
+        printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
+
+        // encoding
         bdg->ProcessWithGPU();
-        end = GetTime();
-        printf("betsy compute time: %0.3f ms\n", (end - start) / 1000.f);
     }
     else
     {

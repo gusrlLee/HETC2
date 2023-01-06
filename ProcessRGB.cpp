@@ -4105,6 +4105,7 @@ void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_
             w = 0;
         }
         *dst++ = ProcessRGB_ETC2( (uint8_t*)buf, useHeuristics );
+        *dst = 0;
     }
     while( --blocks );
 }

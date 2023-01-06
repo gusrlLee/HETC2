@@ -243,6 +243,7 @@
     <ClInclude Include="..\betsy\sds\sds_fstreamNsud.h" />
     <ClInclude Include="..\Bitmap.hpp" />
     <ClInclude Include="..\BitmapDownsampled.hpp" />
+    <ClInclude Include="..\BlockData.hpp" />
     <ClInclude Include="..\BlockDataGPU.hpp" />
     <ClInclude Include="..\ColorSpace.hpp" />
     <ClInclude Include="..\DataProvider.hpp" />

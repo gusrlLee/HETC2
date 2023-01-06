@@ -111,7 +111,7 @@ namespace betsy
 		{
 			m_ditheredTexture = createTexture( TextureParams( m_width, m_height, PFG_RGBA8_UNORM,
 															  "m_ditheredTexture", TextureFlags::Uav ) );
-			m_ditherPso = createComputePsoFromFile( "dither555.glsl", "../Data/" );
+			//m_ditherPso = createComputePsoFromFile( "dither555.glsl", "../Data/" );
 		}
 		else
 		{
@@ -137,8 +137,8 @@ namespace betsy
 			delete[] filledTables;
 		}
 
-		m_compressPso =
-			createComputePsoFromFile( bForEtc2 ? "etc1_with_error.glsl" : "etc1.glsl", "../Data/" );
+		//m_compressPso =
+		//	createComputePsoFromFile( bForEtc2 ? "etc1_with_error.glsl" : "etc1.glsl", "../Data/" );
 
 		if( bCompressAlpha )
 		{
@@ -148,11 +148,11 @@ namespace betsy
 			m_stitchedTarget =
 				createTexture( TextureParams( getBlockWidth(), getBlockHeight(), PFG_RGBA32_UINT,
 											  "m_stitchedTarget", TextureFlags::Uav ) );
-			m_eacPso = createComputePsoFromFile( "eac.glsl", "../Data/" );
+			//m_eacPso = createComputePsoFromFile( "eac.glsl", "../Data/" );
 
 			// ETC2 codec does its own stitching
-			if( !bForEtc2 )
-				m_stitchPso = createComputePsoFromFile( "etc2_rgba_stitch.glsl", "../Data/" );
+			//if( !bForEtc2 )
+			//	m_stitchPso = createComputePsoFromFile( "etc2_rgba_stitch.glsl", "../Data/" );
 		}
 
 		StagingTexture stagingTex = createStagingTexture( m_width, m_height, srcImage.format, true );
@@ -165,6 +165,24 @@ namespace betsy
 									 const bool bDither )
 	{
 		initResources( srcImage, bCompressAlpha, bDither, false );
+	}
+	//-------------------------------------------------------------------------
+	void EncoderETC1::encoderShaderCompile(const bool bCompressAlpha, const bool bDither, const bool bForEtc2)
+	{
+		if (bDither)
+		{
+			m_ditherPso = createComputePsoFromFile("dither555.glsl", "../Data/");
+		}
+		m_compressPso =
+			createComputePsoFromFile(bForEtc2 ? "etc1_with_error.glsl" : "etc1.glsl", "../Data/");
+		
+		if (bCompressAlpha)
+		{
+			m_eacPso = createComputePsoFromFile("eac.glsl", "../Data/");
+			// ETC2 codec does its own stitching
+			if (!bForEtc2)
+				m_stitchPso = createComputePsoFromFile("etc2_rgba_stitch.glsl", "../Data/");
+		}
 	}
 	//-------------------------------------------------------------------------
 	void EncoderETC1::deinitResources()

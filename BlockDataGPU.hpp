@@ -45,6 +45,7 @@ public:
 	BlockDataGPU();
 
 	void initGPU(const char* input);
+	void setEncodingEnv();
 	void ProcessWithGPU();
 
 private:

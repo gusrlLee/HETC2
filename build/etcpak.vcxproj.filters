@@ -355,6 +355,7 @@
       <Filter>betsy\sds</Filter>
     </ClInclude>
     <ClInclude Include="..\BlockDataGPU.hpp" />
+    <ClInclude Include="..\BlockData.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\gvmat64.obj">

@@ -251,7 +251,7 @@ void BlockData::Process( const uint32_t* src, uint32_t blocks, size_t offset, si
             }
             break;
         case Etc2_RGB:
-            CompressEtc2Rgb( src, dst, blocks, width, useHeuristics );
+            CompressEtc2Rgb( src, dst, blocks, width, useHeuristics ); // our input path!
             break;
         case Dxt1:
             if( dither )
