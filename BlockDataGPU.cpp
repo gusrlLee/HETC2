@@ -52,13 +52,12 @@ void BlockDataGPU::ProcessWithGPU()
         m_Encoder.execute02();
     }
 
-
     // for checking betsy output
     // saveToOffData(m_Encoder, "betsy_out.ktx");
-    m_Encoder.deinitResources();
     glFinish();
-
     auto end = GetTime();
+
+    m_Encoder.deinitResources();
     printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
     printf("End betsy GPU mode \n");
 }

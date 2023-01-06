@@ -102,8 +102,10 @@ namespace betsy
 	//-------------------------------------------------------------------------
 	void EncoderETC2::execute01( EncoderETC2::Etc1Quality quality )
 	{
+		// etc1 
 		EncoderETC1::execute01( quality );
 
+		// etc2 T-/H-mode 
 		bindTexture( 0u, m_ditheredTexture );
 		bindUav( 0u, m_thModesTargetRes, PFG_RG32_UINT, ResourceAccess::Write );
 		bindUav( 1u, m_thModesError, PFG_R32_FLOAT, ResourceAccess::Write );
@@ -112,6 +114,7 @@ namespace betsy
 		glDispatchCompute( alignToNextMultiple( m_width, 4u ) / 4u,
 						   alignToNextMultiple( m_height, 4u ) / 4u, 1u );
 
+		// P-mode
 		bindUav( 0u, m_pModeTargetRes, PFG_RG32_UINT, ResourceAccess::Write );
 		bindUav( 1u, m_pModeError, PFG_R32_FLOAT, ResourceAccess::Write );
 		bindComputePso( m_pModePso );
