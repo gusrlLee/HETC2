@@ -48,7 +48,7 @@ public:
 
 	void initGPU(const char* input);
 	void setEncodingEnv();
-	void ProcessWithGPU();
+	void ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline);
 
 private:
 	size_t m_Repeat;

@@ -553,7 +553,6 @@ int main( int argc, char** argv )
             printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
         }
         printf("errorblock queue size = %d\n", errorBlockDataPipeline->getSize());
-
         // GPU encoding
         //-------------------------------------------------------------------------
         auto start = GetTime();
@@ -564,7 +563,8 @@ int main( int argc, char** argv )
         printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
 
         // encoding
-        bdg->ProcessWithGPU();
+        bdg->ProcessWithGPU( errorBlockDataPipeline );
+        TaskDispatch::Sync();
     }
     else
     {
@@ -633,7 +633,7 @@ int main( int argc, char** argv )
                 }
             }
         }
-        TaskDispatch::Sync();
+        // TaskDispatch::Sync();
 
         if( stats )
         {

@@ -39,10 +39,14 @@ void BlockDataGPU::initGPU(const char* input)
     glFinish(); // wait initResource
 }
 
-void BlockDataGPU::ProcessWithGPU()
+void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
 {
     printf("start Encoding in GPU\n");
-
+    while( pipeline->getSize() != 0) 
+    {
+        ErrorBlock errorBlock = pipeline->getErrorBlock();
+        printf("Error block size = %i\n", pipeline->getSize());
+    }
     auto start = GetTime();
     while (m_Repeat--)
     {

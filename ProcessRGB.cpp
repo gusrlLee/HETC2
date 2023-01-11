@@ -4346,6 +4346,7 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
             divRGBData((uint8_t*)srcBuffer, errorBlock.srcBuffer);
             pipeline->pushErrorBlock( errorBlock );
         }
+        dst++;
     } while (--blocks);
 }
 
