@@ -9,14 +9,43 @@ ErrorBlockData::ErrorBlockData()
 void ErrorBlockData::pushErrorBlock(ErrorBlock errorBlock)
 {
 	std::lock_guard<std::mutex> lock(blockMutex);
-	pipeline.push(errorBlock);
+	m_Pipeline.push(errorBlock);
 }
 
 ErrorBlock ErrorBlockData::getErrorBlock()
 {
 	std::lock_guard<std::mutex> lock(blockMutex);
-	ErrorBlock errorBlock = pipeline.front();
-	pipeline.pop();
+	ErrorBlock errorBlock = m_Pipeline.front();
+	m_Pipeline.pop();
 	return errorBlock;
 }
 
+unsigned int ErrorBlockData::getSize()
+{
+	std::lock_guard<std::mutex> lock(blockMutex);
+	return m_Pipeline.size();
+}
+
+bool ErrorBlockData::isEmpty()
+{
+	std::lock_guard<std::mutex> lock(blockMutex);
+	return m_Pipeline.empty();
+}
+
+void ErrorBlockData::setNumTasks( unsigned int n )
+{
+	std::lock_guard<std::mutex> lock(taskMutex);
+	m_NumTasks = n;
+}
+
+unsigned int ErrorBlockData::getNumTasks()
+{
+	std::lock_guard<std::mutex> lock(taskMutex);
+	return m_NumTasks;
+}
+
+void ErrorBlockData::endWorker()
+{
+	std::lock_guard<std::mutex> lock(taskMutex);
+	m_NumTasks -= 1;
+}

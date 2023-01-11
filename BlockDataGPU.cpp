@@ -42,27 +42,34 @@ void BlockDataGPU::initGPU(const char* input)
 void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
 {
     printf("start Encoding in GPU\n");
-    while( pipeline->getSize() != 0) 
+    while (true)
     {
-        ErrorBlock errorBlock = pipeline->getErrorBlock();
-        printf("Error block size = %i\n", pipeline->getSize());
+        unsigned int remainder = pipeline->getNumTasks();
+        if ((remainder == 0u) && pipeline->isEmpty())
+        {
+            printf("GPU Exit\n");
+            break;
+        }
+        if (!pipeline->isEmpty())
+        {
+            ErrorBlock errorBlock = pipeline->getErrorBlock();
+            betsy::CpuImage cpuImage = betsy::CpuImage(errorBlock.srcBuffer.data(), errorBlock.srcBuffer.size(), 4, 4, 3);
+             m_Encoder.initResources(cpuImage, Codec::etc2_rgb, false);
+            //m_Encoder.execute00();
+            //m_Encoder.execute01();
+            //m_Encoder.execute02();
+            m_Encoder.deinitResources();
+        }
     }
-    auto start = GetTime();
-    while (m_Repeat--)
-    {
-        // if write while loop, segementation fault so, twice write excute method 
-        m_Encoder.execute00();
-        m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(m_Quality));
-        m_Encoder.execute02();
-    }
+    //auto start = GetTime();
 
     // for checking betsy output
     // saveToOffData(m_Encoder, "betsy_out.ktx");
-    glFinish();
-    auto end = GetTime();
-
-    m_Encoder.deinitResources();
-    printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
+    //glFinish();
+    //auto end = GetTime();
+    printf("After Number of Tasks = %u\n", pipeline->getNumTasks());
+    printf("After error block size = %u\n", pipeline->getSize());
+    //printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
     printf("End betsy GPU mode \n");
 }
 

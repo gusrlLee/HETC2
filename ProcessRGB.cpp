@@ -4348,6 +4348,8 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
         }
         dst++;
     } while (--blocks);
+    pipeline->endWorker();
+
 }
 
 void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics )

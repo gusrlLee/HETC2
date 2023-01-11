@@ -378,6 +378,13 @@ int main( int argc, char** argv )
     {
         betsy::initBetsyPlatform();
         auto bdg = std::make_shared<BlockDataGPU>();
+        auto start = GetTime();
+        bdg->setEncodingEnv();
+        // bdg->initGPU(input);
+        glFinish();
+        auto    end = GetTime();
+
+        printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
         TaskDispatch taskDispatch(cpus);
         auto errorBlockDataPipeline = std::make_shared<ErrorBlockData>();
         
@@ -413,6 +420,7 @@ int main( int argc, char** argv )
 
                 DataProvider dp((inputDir + "/" + imagePathList[i]).c_str(), mipmap, !dxtc, linearize);
                 auto num = dp.NumberOfParts();
+                errorBlockDataPipeline->setNumTasks(num);
 
                 BlockData::Type type;
                 if (etc2)
@@ -484,6 +492,7 @@ int main( int argc, char** argv )
         {
             DataProvider dp(input, mipmap, !dxtc, linearize);
             auto num = dp.NumberOfParts();
+            errorBlockDataPipeline->setNumTasks( num );
 
             BlockData::Type type;
             if (etc2)
@@ -548,22 +557,16 @@ int main( int argc, char** argv )
                     }
                 }
             }
+            TaskDispatch::Queue([&bdg, &errorBlockDataPipeline]()
+                {
+                    bdg->ProcessWithGPU(errorBlockDataPipeline);
+                });
             TaskDispatch::Sync();
             auto end = GetTime();
             printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
         }
-        printf("errorblock queue size = %d\n", errorBlockDataPipeline->getSize());
         // GPU encoding
         //-------------------------------------------------------------------------
-        auto start = GetTime();
-        bdg->setEncodingEnv();
-        bdg->initGPU(input);
-        auto    end = GetTime();
-
-        printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
-
-        // encoding
-        bdg->ProcessWithGPU( errorBlockDataPipeline );
         TaskDispatch::Sync();
     }
     else

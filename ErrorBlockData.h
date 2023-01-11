@@ -20,11 +20,19 @@ public:
 	ErrorBlockData();
 	void pushErrorBlock(ErrorBlock errorBlock);
 	ErrorBlock getErrorBlock();
-	int getSize() { return pipeline.size(); }
+	
+	unsigned int getSize();
+	bool isEmpty();
+	void endWorker();
+	void setNumTasks( unsigned int n );
+	unsigned int getNumTasks();
 
 private:
-	std::queue<ErrorBlock> pipeline;
+	std::queue<ErrorBlock> m_Pipeline;
+	unsigned int m_NumTasks;
+
 	std::mutex blockMutex;
+	std::mutex taskMutex;
 };
 
 typedef std::shared_ptr<ErrorBlockData> ErrorBlockDataPtr;
