@@ -203,6 +203,7 @@
       <Filter>betsy\sds</Filter>
     </ClCompile>
     <ClCompile Include="..\BlockDataGPU.cpp" />
+    <ClCompile Include="..\ErrorBlockData.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\zlib\crc32.h">
@@ -356,6 +357,7 @@
     </ClInclude>
     <ClInclude Include="..\BlockDataGPU.hpp" />
     <ClInclude Include="..\BlockData.hpp" />
+    <ClInclude Include="..\ErrorBlockData.h" />
   </ItemGroup>
   <ItemGroup>
     <Object Include="..\zlib\gvmat64.obj">

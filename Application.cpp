@@ -9,6 +9,9 @@
 #include <direct.h> // for make directory
 #include <list>
 #include <sys/stat.h>
+#include <queue>
+
+#include "ErrorBlockData.h" // for pipeline
 
 #ifdef _MSC_VER
 #  include "getopt/getopt.h"
@@ -26,7 +29,7 @@
 #include "TaskDispatch.hpp"
 #include "Timing.hpp"
 
-#include "BlockDataGPU.hpp"
+#include "BlockDataGPU.hpp" // for GPU encoding
 
 template <typename T>
 void saveToOffData(T& encoder, const char* file_path)
@@ -376,8 +379,8 @@ int main( int argc, char** argv )
         betsy::initBetsyPlatform();
         auto bdg = std::make_shared<BlockDataGPU>();
         TaskDispatch taskDispatch(cpus);
-
-
+        auto errorBlockDataPipeline = std::make_shared<ErrorBlockData>();
+        
         // CPU encoding with Multi processing 
         //-------------------------------------------------------------------------
 
@@ -460,9 +463,9 @@ int main( int argc, char** argv )
                     }
                     else
                     {
-                        TaskDispatch::Queue([part, i, &bd, &dither, useHeuristics]()
+                        TaskDispatch::Queue([part, i, &bd, &dither, &errorBlockDataPipeline, useHeuristics]()
                             {
-                                bd->Process(part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, useHeuristics);
+                                bd->Process(part.src, part.width / 4 * part.lines, errorBlockDataPipeline, part.offset, part.width, Channels::RGB, dither, useHeuristics);
                             });
                         if (bda)
                         {
@@ -531,9 +534,10 @@ int main( int argc, char** argv )
                 }
                 else
                 {
-                    TaskDispatch::Queue([part, i, &bd, &dither, useHeuristics]()
+                    TaskDispatch::Queue([part, i, &bd, &dither, &errorBlockDataPipeline, useHeuristics]()
                         {
-                            bd->Process(part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::RGB, dither, useHeuristics);
+                            // our path
+                            bd->Process(part.src, part.width / 4 * part.lines, errorBlockDataPipeline, part.offset, part.width, Channels::RGB, dither, useHeuristics);
                         });
                     if (bda)
                     {
@@ -548,14 +552,15 @@ int main( int argc, char** argv )
             auto end = GetTime();
             printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
         }
+        printf("errorblock queue size = %d\n", errorBlockDataPipeline->getSize());
 
-        
         // GPU encoding
         //-------------------------------------------------------------------------
         auto start = GetTime();
         bdg->setEncodingEnv();
         bdg->initGPU(input);
         auto    end = GetTime();
+
         printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
 
         // encoding

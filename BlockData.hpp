@@ -8,10 +8,12 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <vector>
+#include <queue>
 
 #include "Bitmap.hpp"
 #include "ForceInline.hpp"
 #include "Vector.hpp"
+#include "ErrorBlockData.h"
 
 class BlockData
 {
@@ -33,6 +35,8 @@ public:
     BitmapPtr Decode();
 
     void Process( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, Channels type, bool dither, bool useHeuristics );
+    // add Hyeon
+    void Process(const uint32_t* src, uint32_t blocks, std::shared_ptr<ErrorBlockData> pipeline, size_t offset, size_t width, Channels type, bool dither, bool useHeuristics);
     void ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool useHeuristics );
 
     const v2i& Size() const { return m_size; }

@@ -3131,6 +3131,163 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
 #endif
 }
 
+
+static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool useHeuristics, bool &isHighError)
+{ // add Hyeon
+#ifdef __AVX2__
+    uint64_t d = CheckSolid_AVX2(src);
+    if (d != 0) return d;
+#else
+    uint64_t d = CheckSolid(src);
+    if (d != 0) return d;
+#endif
+
+    uint8_t mode = ModeUndecided;
+    Luma luma;
+#ifdef __AVX2__
+    Channels ch = GetChannels(src);
+    if (useHeuristics)
+    {
+        CalculateLuma(ch, luma);
+        mode = SelectModeETC2(luma);
+    }
+
+    auto plane = Planar_AVX2(ch, mode, useHeuristics);
+    if (useHeuristics && mode == ModePlanar) return plane.plane;
+
+    alignas(32) v4i a[8];
+    __m128i err0 = PrepareAverages_AVX2(a, plane.sum4);
+
+    // Get index of minimum error (err0)
+    __m128i err1 = _mm_shuffle_epi32(err0, _MM_SHUFFLE(2, 3, 0, 1));
+    __m128i errMin0 = _mm_min_epu32(err0, err1);
+
+    __m128i errMin1 = _mm_shuffle_epi32(errMin0, _MM_SHUFFLE(1, 0, 3, 2));
+    __m128i errMin2 = _mm_min_epu32(errMin1, errMin0);
+
+    __m128i errMask = _mm_cmpeq_epi32(errMin2, err0);
+
+    uint32_t mask = _mm_movemask_epi8(errMask);
+
+    size_t idx = _bit_scan_forward(mask) >> 2;
+
+    d = EncodeAverages_AVX2(a, idx);
+
+    alignas(32) uint32_t terr[2][8] = {};
+    alignas(32) uint32_t tsel[8];
+
+    uint64_t errorThreshold = 20000000;
+
+    if ((idx == 0) || (idx == 2))
+    {
+        FindBestFit_4x2_AVX2(terr, tsel, a, idx * 2, src);
+    }
+    else
+    {
+        FindBestFit_2x4_AVX2(terr, tsel, a, idx * 2, src);
+    }
+
+    if (useHeuristics)
+    {
+        if (mode == ModeTH)
+        {
+            uint64_t result = 0;
+            uint64_t error = 0;
+            uint32_t compressed[4] = { 0, 0, 0, 0 };
+            bool tMode = false;
+
+            error = compressBlockTH((uint8_t*)src, luma, compressed[0], compressed[1], tMode, ch.r8, ch.g8, ch.b8);
+            if (tMode)
+            {
+                stuff59bits(compressed[0], compressed[1], compressed[2], compressed[3]);
+            }
+            else
+            {
+                stuff58bits(compressed[0], compressed[1], compressed[2], compressed[3]);
+            }
+
+            result = (uint32_t)_bswap(compressed[2]);
+            result |= static_cast<uint64_t>(_bswap(compressed[3])) << 32;
+
+            plane.plane = result;
+            plane.error = error;
+        }
+        else
+        {
+            plane.plane = 0;
+            plane.error = MaxError;
+        }
+    }
+
+    if (plane.error > errorThreshold && plane.error != MaxError) {
+        // printf("error = %lld\n", plane.error); // for error check
+        isHighError = true;
+    }
+
+    return EncodeSelectors_AVX2(d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error);
+#else
+    if (useHeuristics)
+    {
+#if defined __ARM_NEON && defined __aarch64__
+        Channels ch = GetChannels(src);
+        CalculateLuma(ch, luma);
+#else
+        CalculateLuma(src, luma);
+#endif
+        mode = SelectModeETC2(luma);
+    }
+#ifdef __ARM_NEON
+    auto result = Planar_NEON(src, mode, useHeuristics);
+#else
+    auto result = Planar(src, mode, useHeuristics);
+#endif
+    if (result.second == 0) return result.first;
+
+    v4i a[8];
+    unsigned int err[4] = {};
+    PrepareAverages(a, src, err);
+    size_t idx = GetLeastError(err, 4);
+    EncodeAverages(d, a, idx);
+
+#if ( defined __SSE4_1__ || defined __ARM_NEON ) && !defined REFERENCE_IMPLEMENTATION
+    uint32_t terr[2][8] = {};
+#else
+    uint64_t terr[2][8] = {};
+#endif
+    uint16_t tsel[16][8];
+    auto id = g_id[idx];
+    FindBestFit(terr, tsel, a, id, src);
+
+    if (useHeuristics)
+    {
+        if (mode == ModeTH)
+        {
+            uint32_t compressed[4] = { 0, 0, 0, 0 };
+            bool tMode = false;
+
+            result.second = compressBlockTH((uint8_t*)src, luma, compressed[0], compressed[1], tMode);
+            if (tMode)
+            {
+                stuff59bits(compressed[0], compressed[1], compressed[2], compressed[3]);
+            }
+            else
+            {
+                stuff58bits(compressed[0], compressed[1], compressed[2], compressed[3]);
+            }
+
+            result.first = (uint32_t)_bswap(compressed[2]);
+            result.first |= static_cast<uint64_t>(_bswap(compressed[3])) << 32;
+        }
+        else
+        {
+            result.first = 0;
+            result.second = MaxError;
+        }
+    }
+    return EncodeSelectors(d, terr, tsel, id, result.first, result.second);
+#endif
+}
+
 #ifdef __SSE4_1__
 template<int K>
 static etcpak_force_inline __m128i Widen( const __m128i src )
@@ -4105,9 +4262,91 @@ void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_
             w = 0;
         }
         *dst++ = ProcessRGB_ETC2( (uint8_t*)buf, useHeuristics );
-        *dst = 0;
     }
     while( --blocks );
+}
+
+// hyeon add 
+void divRGBData(const uint8_t* src, std::vector<unsigned char> &dst)
+{
+    for (size_t i = 0; i < 16; i++)
+    {
+        uint8_t b = *src++;
+        uint8_t g = *src++;
+        uint8_t r = *src++;
+        src++;
+
+        //dst[i * c] = b;
+        //dst[i * c + 1] = g;
+        //dst[i * c + 2] = r;
+        dst.push_back(b);
+        dst.push_back(g);
+        dst.push_back(r);
+    }
+}
+
+void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBlockData> pipeline, uint32_t blocks, size_t width, bool useHeuristics)
+{ // add Hyeon
+    int w = 0;
+    uint32_t buf[4 * 4];
+    uint32_t srcBuffer[4 * 4];
+    do
+    {
+#ifdef __SSE4_1__
+        __m128 px0 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 0)));
+        __m128 px1 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 1)));
+        __m128 px2 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 2)));
+        __m128 px3 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 3)));
+
+        _MM_TRANSPOSE4_PS(px0, px1, px2, px3);
+
+        _mm_store_si128((__m128i*)(buf + 0), _mm_castps_si128(px0));
+        _mm_store_si128((__m128i*)(buf + 4), _mm_castps_si128(px1));
+        _mm_store_si128((__m128i*)(buf + 8), _mm_castps_si128(px2));
+        _mm_store_si128((__m128i*)(buf + 12), _mm_castps_si128(px3));
+
+        src += 4;
+#else
+        auto ptr = buf;
+        for (int x = 0; x < 4; x++)
+        {
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src -= width * 3 - 1;
+        }
+#endif
+        if (++w == width / 4)
+        {
+            src += width * 3;
+            w = 0;
+        }
+
+        // add Hyeon
+        bool isHighError = false;
+        *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError);
+        if (isHighError) 
+        {
+            int idx = 12;
+            for (int i = 0; i < 4; i++) {
+                srcBuffer[idx + 0] = buf[i + 0];
+                srcBuffer[idx + 1] = buf[i + 4];
+                srcBuffer[idx + 2] = buf[i + 8];
+                srcBuffer[idx + 3] = buf[i + 12];
+                idx -= 4;
+            }
+
+            BYTE* divRGBBuffer;
+            ErrorBlock errorBlock;
+            errorBlock.dstAddress = dst;
+            divRGBData((uint8_t*)srcBuffer, errorBlock.srcBuffer);
+            pipeline->pushErrorBlock( errorBlock );
+        }
+    } while (--blocks);
 }
 
 void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics )
