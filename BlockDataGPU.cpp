@@ -71,8 +71,6 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
                 m_Encoder.execute01();
                 m_Encoder.execute02();
             }
-            m_Encoder.startDownload();
-            glFinish();
             m_Encoder.saveToOffset(errorBlock.dstAddress);
         }
     }
