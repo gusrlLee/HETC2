@@ -88,13 +88,15 @@ uint quant4( float3 rgbValue )
 float calcError( const uint colour0, const uint colour1 )
 {
 	float3 diff = unpackUnorm4x8( colour0 ).xyz - unpackUnorm4x8( colour1 ).xyz;
-	return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
+	// return dot( diff, diff ) * 65025.0f; // 65025 = 255 * 255
+	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
 }
 
 float calcError( const uint colour0, const float3 colour1 )
 {
 	float3 diff = unpackUnorm4x8( colour0 ).xyz - colour1.xyz;
-	return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
+	// return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
+	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
 }
 
 void block_main_colors_find( out uint outC0, out uint outC1, uint c0, uint c1 )

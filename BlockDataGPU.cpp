@@ -62,23 +62,26 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
         {
             ErrorBlock errorBlock = pipeline->getErrorBlock();
             // printf("error block size = %u\n", pipeline->getSize());
+            auto start = GetTime();
+
             betsy::CpuImage cpuImage = betsy::CpuImage(errorBlock.srcBuffer.data(), arraySize, w, h, c);
             m_Encoder.initResources(cpuImage, Codec::etc2_rgb, false);
-
+  
             while (repeat--)
             {
                 m_Encoder.execute00();
-                m_Encoder.execute01();
+                m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>( 2 )); // high Quality
                 m_Encoder.execute02();
             }
             m_Encoder.saveToOffset(errorBlock.dstAddress);
+            auto end = GetTime();
+            printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
         }
     }
     m_Encoder.deinitResources();
 
     printf("After Number of Tasks = %u\n", pipeline->getNumTasks());
     printf("After error block size = %u\n", pipeline->getSize());
-    //printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
     printf("End betsy GPU mode \n");
 }
 

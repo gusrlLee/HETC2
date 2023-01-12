@@ -141,7 +141,8 @@ float3 rgb676To888( float3 rgbValue )
 float calcError( const float3 colour0, const float3 colour1 )
 {
 	float3 diff = colour0.xyz - colour1.xyz;
-	return dot( diff, diff );
+	// return dot( diff, diff );
+	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f);
 }
 
 float calcErrorPMode( float3 cO, float3 cH, float3 cV )

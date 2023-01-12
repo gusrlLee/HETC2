@@ -20,6 +20,16 @@ ErrorBlock ErrorBlockData::getErrorBlock()
 	return errorBlock;
 }
 
+void ErrorBlockData::pushResultBlock(ErrorBlock errorBlock)
+{
+
+}
+
+ErrorBlock ErrorBlockData::getResultBlock()
+{
+
+}
+
 unsigned int ErrorBlockData::getSize()
 {
 	std::lock_guard<std::mutex> lock(blockMutex);

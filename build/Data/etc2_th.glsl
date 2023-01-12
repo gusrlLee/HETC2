@@ -189,7 +189,8 @@ uint quant4( float3 rgbValue )
 float calcError( const uint colour0, const uint colour1 )
 {
 	float3 diff = unpackUnorm4x8( colour0 ).xyz - unpackUnorm4x8( colour1 ).xyz;
-	return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
+	// return dot( diff, diff ) * 65025.0f; // 65025 = 255 * 255
+	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
 }
 
 /// Performs:
