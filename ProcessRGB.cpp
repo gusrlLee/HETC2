@@ -4329,8 +4329,10 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
         // add Hyeon
         bool isHighError = false;
         *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError);
-        if (isHighError) 
+        if ( isHighError ) 
         {
+            *dst = 0;
+
             int idx = 12;
             for (int i = 0; i < 4; i++) {
                 srcBuffer[idx + 0] = buf[i + 0];
@@ -4349,7 +4351,6 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
         dst++;
     } while (--blocks);
     pipeline->endWorker();
-
 }
 
 void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics )

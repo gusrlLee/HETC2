@@ -4,6 +4,7 @@
 #include "betsy/CpuImage.h"
 
 #include <assert.h>
+#include <stdio.h>
 
 #define TODO_better_barrier
 
@@ -175,5 +176,51 @@ namespace betsy
 		m_downloadStaging = createStagingTexture( getBlockWidth(), getBlockHeight(),
 												  hasAlpha() ? PFG_RGBA32_UINT : PFG_RG32_UINT, false );
 		downloadStagingTexture( hasAlpha() ? m_stitchedTarget : m_pModeTargetRes, m_downloadStaging );
+	}
+
+	uint64_t FixByteOrder(uint64_t d)
+	{
+		return ((d & 0x00000000FFFFFFFF)) |
+			((d & 0xFF00000000000000) >> 24) |
+			((d & 0x000000FF00000000) << 24) |
+			((d & 0x00FF000000000000) >> 8) |
+			((d & 0x0000FF0000000000) << 8);
+	}
+
+	void EncoderETC2::saveToOffset(uint64_t* dst)
+	{
+				// It's unclear which of these 2 barrier bits GL wants in order for glCopyImageSubData to work
+		glMemoryBarrier( GL_TEXTURE_UPDATE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+
+		// Copy "8x8" PFG_RG32_UINT -> 32x32 PFG_ETC1_RGB8_UNORM
+		glCopyImageSubData( m_compressTargetRes, GL_TEXTURE_2D, 0, 0, 0, 0,  //
+							m_dstTexture, GL_TEXTURE_2D, 0, 0, 0, 0,         //
+							( GLsizei )( getBlockWidth() ), ( GLsizei )( getBlockHeight() ), 1 );
+
+		StagingTexture stagingTex =
+			createStagingTexture( getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, false );
+		downloadStagingTexture( m_compressTargetRes, stagingTex );
+		glFinish();
+
+		const uint8_t *result = (const uint8_t *)stagingTex.data;
+		uint64_t final_data = 0u;
+		uint8_t mask = 0xC0;
+		unsigned int shift_numer = 24;
+
+		for (size_t b = 0u; b < 1u; ++b)
+		{
+			// base color 
+			final_data |= (uint64_t(result[b * 8u + size_t(0u)]) << 0);
+			final_data |= (uint64_t(result[b * 8u + size_t(1u)]) << 8);
+			final_data |= (uint64_t(result[b * 8u + size_t(2u)]) << 16);
+			final_data |= (uint64_t(result[b * 8u + size_t(3u)]) << 24);
+
+			// index table
+			final_data |= (uint64_t(result[b * 8u + size_t(4u)]) << 56);
+			final_data |= (uint64_t(result[b * 8u + size_t(5u)]) << 48);
+			final_data |= (uint64_t(result[b * 8u + size_t(6u)]) << 40);
+			final_data |= (uint64_t(result[b * 8u + size_t(7u)]) << 32);
+		}
+		*dst = FixByteOrder(final_data);
 	}
 }  // namespace betsy

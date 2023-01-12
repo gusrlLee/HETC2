@@ -30,6 +30,7 @@ BlockDataGPU::BlockDataGPU()
 void BlockDataGPU::setEncodingEnv()
 {
     m_Encoder.encoderShaderCompile(Codec::etc2_rgb, false);
+    glFinish();
 }
 
 void BlockDataGPU::initGPU(const char* input)
@@ -42,31 +43,41 @@ void BlockDataGPU::initGPU(const char* input)
 void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
 {
     printf("start Encoding in GPU\n");
+    int w = 4;
+    int h = 4;
+    int c = 3;
+
     while (true)
     {
+        size_t repeat = 1u;
+        
+        int arraySize = 4 * 4 * 3;
         unsigned int remainder = pipeline->getNumTasks();
         if ((remainder == 0u) && pipeline->isEmpty())
         {
             printf("GPU Exit\n");
             break;
         }
-        if (!pipeline->isEmpty())
+        else
         {
             ErrorBlock errorBlock = pipeline->getErrorBlock();
-            betsy::CpuImage cpuImage = betsy::CpuImage(errorBlock.srcBuffer.data(), errorBlock.srcBuffer.size(), 4, 4, 3);
-             m_Encoder.initResources(cpuImage, Codec::etc2_rgb, false);
-            //m_Encoder.execute00();
-            //m_Encoder.execute01();
-            //m_Encoder.execute02();
-            m_Encoder.deinitResources();
+            // printf("error block size = %u\n", pipeline->getSize());
+            betsy::CpuImage cpuImage = betsy::CpuImage(errorBlock.srcBuffer.data(), arraySize, w, h, c);
+            m_Encoder.initResources(cpuImage, Codec::etc2_rgb, false);
+
+            while (repeat--)
+            {
+                m_Encoder.execute00();
+                m_Encoder.execute01();
+                m_Encoder.execute02();
+            }
+            m_Encoder.startDownload();
+            glFinish();
+            m_Encoder.saveToOffset(errorBlock.dstAddress);
         }
     }
-    //auto start = GetTime();
+    m_Encoder.deinitResources();
 
-    // for checking betsy output
-    // saveToOffData(m_Encoder, "betsy_out.ktx");
-    //glFinish();
-    //auto end = GetTime();
     printf("After Number of Tasks = %u\n", pipeline->getNumTasks());
     printf("After error block size = %u\n", pipeline->getSize());
     //printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);

@@ -46,5 +46,6 @@ namespace betsy
 		void execute03();
 
 		void startDownload();
+		void saveToOffset(uint64_t *dst);
 	};
 }  // namespace betsy
