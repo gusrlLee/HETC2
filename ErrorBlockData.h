@@ -14,19 +14,11 @@ typedef struct ErrorBlock {
 	std::vector<unsigned char> srcBuffer;
 };
 
-typedef struct ResultBlock {
-	uint64_t* dstAddress;
-	
-};
-
 class ErrorBlockData {
 public:
 	ErrorBlockData();
 	void pushErrorBlock(ErrorBlock errorBlock);
 	ErrorBlock getErrorBlock();
-
-	void pushResultBlock(ErrorBlock resultBlock);
-	ErrorBlock getResultBlock();
 	
 	unsigned int getSize();
 	bool isEmpty();
@@ -36,11 +28,9 @@ public:
 
 private:
 	std::queue<ErrorBlock> m_Pipeline;
-	std::queue<ErrorBlock> m_ResultPipeline;
 	unsigned int m_NumTasks;
 
 	std::mutex blockMutex;
-	std::mutex reslutMutex;
 	std::mutex taskMutex;
 };
 
