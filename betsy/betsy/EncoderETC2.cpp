@@ -200,7 +200,7 @@ namespace betsy
 		StagingTexture stagingTex =
 			createStagingTexture( getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, false );
 		downloadStagingTexture( m_compressTargetRes, stagingTex );
-		glFinish();
+		// glFinish();
 
 		const uint8_t *result = (const uint8_t *)stagingTex.data;
 		uint64_t final_data = 0u;

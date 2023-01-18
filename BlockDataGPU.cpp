@@ -75,7 +75,7 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
             }
             m_Encoder.saveToOffset(errorBlock.dstAddress);
             auto end = GetTime();
-            printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
+            // printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
         }
     }
     m_Encoder.deinitResources();

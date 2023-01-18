@@ -381,7 +381,7 @@ int main( int argc, char** argv )
         auto start = GetTime();
         bdg->setEncodingEnv();
         // bdg->initGPU(input);
-        glFinish();
+        // glFinish();
         auto    end = GetTime();
 
         printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);

@@ -3132,7 +3132,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
 }
 
 
-static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool useHeuristics, bool &isHighError)
+static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool useHeuristics, bool &isHighError, uint8_t &check_mode)
 { // add Hyeon
 #ifdef __AVX2__
     uint64_t d = CheckSolid_AVX2(src);
@@ -3153,7 +3153,11 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     }
 
     auto plane = Planar_AVX2(ch, mode, useHeuristics);
-    if (useHeuristics && mode == ModePlanar) return plane.plane;
+    if (useHeuristics && mode == ModePlanar)
+    {
+        check_mode = 2;
+        return plane.plane;
+    }
 
     alignas(32) v4i a[8];
     __m128i err0 = PrepareAverages_AVX2(a, plane.sum4);
@@ -3199,10 +3203,12 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
             error = compressBlockTH((uint8_t*)src, luma, compressed[0], compressed[1], tMode, ch.r8, ch.g8, ch.b8);
             if (tMode)
             {
+                check_mode = 0;
                 stuff59bits(compressed[0], compressed[1], compressed[2], compressed[3]);
             }
             else
             {
+                check_mode = 1;
                 stuff58bits(compressed[0], compressed[1], compressed[2], compressed[3]);
             }
 
@@ -4327,8 +4333,12 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
         }
 
         // add Hyeon
+        // 0 : T-mode
+        // 1 : H-mode
+        // 2 : P-mode
         bool isHighError = false;
-        *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError);
+        uint8_t mode = 0;
+        *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError, mode);
         if ( isHighError ) 
         {
             *dst = 0;
@@ -4351,8 +4361,6 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
         dst++;
     } while (--blocks);
     pipeline->endWorker();
-
-
 }
 
 void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics )

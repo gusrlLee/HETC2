@@ -54,7 +54,7 @@ void main()
 		const uint2 etcRgb = OGRE_Load2D( srcEtc1, int2( gl_GlobalInvocationID.xy ), 0 ).xy;
 		imageStore( dstTexture, int2( gl_GlobalInvocationID.xy ), outputValue );
 	}
-	else if( errorThModes < errorPMode )
+ 	else if( errorThModes < errorPMode )
 	{
 		const uint2 etcRgb = OGRE_Load2D( srcThModes, int2( gl_GlobalInvocationID.xy ), 0 ).xy;
 		imageStore( dstTexture, int2( gl_GlobalInvocationID.xy ), outputValue );
