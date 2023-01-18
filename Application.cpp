@@ -529,7 +529,6 @@ int main( int argc, char** argv )
                 bda = std::make_shared<BlockData>(alpha, dp.Size(), mipmap, type);
             }
 
-
             for (int i = 0; i < num; i++)
             {
                 auto part = dp.NextPart();
@@ -557,18 +556,20 @@ int main( int argc, char** argv )
                     }
                 }
             }
-            TaskDispatch::Queue([&bdg, &errorBlockDataPipeline]()
+
+            TaskDispatch::Sync(); // wait end CPU encoding.
+            errorBlockDataPipeline->pushHighErrorBlocks();
+
+            //-------------------------------------------------------------------------
+            TaskDispatch::Queue([&bdg, &errorBlockDataPipeline]() // start GPU encoding 
                 {
                     bdg->ProcessWithGPU(errorBlockDataPipeline);
                 });
-
-            TaskDispatch::Sync();
+            
             auto end = GetTime();
             printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
+            TaskDispatch::Sync();
         }
-        // GPU encoding
-        //-------------------------------------------------------------------------
-        TaskDispatch::Sync();
     }
     else
     {

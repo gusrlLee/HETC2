@@ -11,33 +11,33 @@
 namespace betsy
 {
 	EncoderETC2::EncoderETC2() :
-		m_thModesTargetRes( 0 ),
-		m_thModesError( 0 ),
-		m_thModesC0C1( 0 ),
-		m_pModeTargetRes( 0 ),
-		m_pModeError( 0 )
+		m_thModesTargetRes(0),
+		m_thModesError(0),
+		m_thModesC0C1(0),
+		m_pModeTargetRes(0),
+		m_pModeError(0)
 	{
 	}
 	//-------------------------------------------------------------------------
-	EncoderETC2::~EncoderETC2() { assert( !m_thModesTargetRes && "deinitResources not called!" ); }
+	EncoderETC2::~EncoderETC2() { assert(!m_thModesTargetRes && "deinitResources not called!"); }
 	//-------------------------------------------------------------------------
-	void EncoderETC2::initResources( const CpuImage &srcImage, const bool bCompressAlpha,
-									 const bool bDither )
+	void EncoderETC2::initResources(const CpuImage& srcImage, const bool bCompressAlpha,
+		const bool bDither)
 	{
-		EncoderETC1::initResources( srcImage, bCompressAlpha, bDither, true );
+		EncoderETC1::initResources(srcImage, bCompressAlpha, bDither, true);
 
 		m_thModesTargetRes =
-			createTexture( TextureParams( getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
-										  "m_thModesTargetRes", TextureFlags::Uav ) );
-		m_thModesError = createTexture( TextureParams( getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
-													   "m_thModesError", TextureFlags::Uav ) );
-		m_thModesC0C1 = createTexture( TextureParams( getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
-													  "m_thModesC0C1", TextureFlags::Uav, 120u ) );
+			createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
+				"m_thModesTargetRes", TextureFlags::Uav));
+		m_thModesError = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
+			"m_thModesError", TextureFlags::Uav));
+		m_thModesC0C1 = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
+			"m_thModesC0C1", TextureFlags::Uav, 120u));
 
-		m_pModeTargetRes = createTexture( TextureParams(
-			getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, "m_pModeTargetRes", TextureFlags::Uav ) );
-		m_pModeError = createTexture( TextureParams( getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
-													 "m_pModeError", TextureFlags::Uav ) );
+		m_pModeTargetRes = createTexture(TextureParams(
+			getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, "m_pModeTargetRes", TextureFlags::Uav));
+		m_pModeError = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
+			"m_pModeError", TextureFlags::Uav));
 
 		// compile shader 
 		//m_thModesPso = createComputePsoFromFile( "etc2_th.glsl", "../Data/" );
@@ -54,7 +54,7 @@ namespace betsy
 	void EncoderETC2::encoderShaderCompile(const bool bCompressAlpha, const bool bDither)
 	{
 		// init ETC1 shader
-		EncoderETC1::encoderShaderCompile( bCompressAlpha, bDither, true );
+		EncoderETC1::encoderShaderCompile(bCompressAlpha, bDither, true);
 
 		// init ETC2 shader
 		m_thModesPso = createComputePsoFromFile("etc2_th.glsl", "../Data/");
@@ -70,17 +70,17 @@ namespace betsy
 	//-------------------------------------------------------------------------
 	void EncoderETC2::deinitResources()
 	{
-		destroyTexture( m_pModeError );
+		destroyTexture(m_pModeError);
 		m_pModeError = 0;
-		destroyTexture( m_pModeTargetRes );
+		destroyTexture(m_pModeTargetRes);
 		m_pModeTargetRes = 0;
-		destroyTexture( m_thModesError );
+		destroyTexture(m_thModesError);
 		m_thModesError = 0;
-		destroyTexture( m_thModesTargetRes );
+		destroyTexture(m_thModesTargetRes);
 		m_thModesTargetRes = 0;
-		destroyPso( m_pModePso );
-		destroyPso( m_thModesFindBestC0C1 );
-		destroyPso( m_thModesPso );
+		destroyPso(m_pModePso);
+		destroyPso(m_thModesFindBestC0C1);
+		destroyPso(m_thModesPso);
 
 		EncoderETC1::deinitResources();
 	}
@@ -89,93 +89,93 @@ namespace betsy
 	{
 		EncoderETC1::execute00();
 
-		bindTexture( 0u, m_ditheredTexture );
-		bindUav( 0u, m_thModesC0C1, PFG_RG32_UINT, ResourceAccess::Write );
-		bindComputePso( m_thModesFindBestC0C1 );
+		bindTexture(0u, m_ditheredTexture);
+		bindUav(0u, m_thModesC0C1, PFG_RG32_UINT, ResourceAccess::Write);
+		bindComputePso(m_thModesFindBestC0C1);
 
-		glDispatchCompute( 1u,  //
-						   alignToNextMultiple( m_width, 16u ) / 16u,
-						   alignToNextMultiple( m_height, 8u ) / 8u );
+		glDispatchCompute(1u,  //
+			alignToNextMultiple(m_width, 16u) / 16u,
+			alignToNextMultiple(m_height, 8u) / 8u);
 
 		TODO_better_barrier;
-		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	}
 	//-------------------------------------------------------------------------
-	void EncoderETC2::execute01( EncoderETC2::Etc1Quality quality )
+	void EncoderETC2::execute01(EncoderETC2::Etc1Quality quality)
 	{
 		// etc1 
-		EncoderETC1::execute01( quality );
+		EncoderETC1::execute01(quality);
 
 		// etc2 T-/H-mode 
-		bindTexture( 0u, m_ditheredTexture );
-		bindUav( 0u, m_thModesTargetRes, PFG_RG32_UINT, ResourceAccess::Write );
-		bindUav( 1u, m_thModesError, PFG_R32_FLOAT, ResourceAccess::Write );
-		bindUav( 2u, m_thModesC0C1, PFG_RG32_UINT, ResourceAccess::Write );
-		bindComputePso( m_thModesPso );
-		glDispatchCompute( alignToNextMultiple( m_width, 4u ) / 4u,
-						   alignToNextMultiple( m_height, 4u ) / 4u, 1u );
+		bindTexture(0u, m_ditheredTexture);
+		bindUav(0u, m_thModesTargetRes, PFG_RG32_UINT, ResourceAccess::Write);
+		bindUav(1u, m_thModesError, PFG_R32_FLOAT, ResourceAccess::Write);
+		bindUav(2u, m_thModesC0C1, PFG_RG32_UINT, ResourceAccess::Write);
+		bindComputePso(m_thModesPso);
+		glDispatchCompute(alignToNextMultiple(m_width, 4u) / 4u,
+			alignToNextMultiple(m_height, 4u) / 4u, 1u);
 
 		// P-mode
-		bindUav( 0u, m_pModeTargetRes, PFG_RG32_UINT, ResourceAccess::Write );
-		bindUav( 1u, m_pModeError, PFG_R32_FLOAT, ResourceAccess::Write );
-		bindComputePso( m_pModePso );
-		glDispatchCompute( alignToNextMultiple( m_width, 8u ) / 8u,
-						   alignToNextMultiple( m_height, 8u ) / 8u, 1u );
+		bindUav(0u, m_pModeTargetRes, PFG_RG32_UINT, ResourceAccess::Write);
+		bindUav(1u, m_pModeError, PFG_R32_FLOAT, ResourceAccess::Write);
+		bindComputePso(m_pModePso);
+		glDispatchCompute(alignToNextMultiple(m_width, 8u) / 8u,
+			alignToNextMultiple(m_height, 8u) / 8u, 1u);
 	}
 	//-------------------------------------------------------------------------
 	void EncoderETC2::execute02()
 	{
 		// Decide which the best modes and merge and stitch
-		glMemoryBarrier( GL_TEXTURE_UPDATE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+		glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-		bindTexture( 0u, m_etc1Error );
-		bindTexture( 1u, m_thModesError );
-		bindTexture( 2u, m_pModeError );
+		bindTexture(0u, m_etc1Error);
+		bindTexture(1u, m_thModesError);
+		bindTexture(2u, m_pModeError);
 
-		bindTexture( 3u, m_compressTargetRes );
-		bindTexture( 4u, m_thModesTargetRes );
+		bindTexture(3u, m_compressTargetRes);
+		bindTexture(4u, m_thModesTargetRes);
 
-		if( hasAlpha() )
+		if (hasAlpha())
 		{
-			bindTexture( 5u, m_pModeTargetRes );
-			bindTexture( 6u, m_eacTargetRes );
+			bindTexture(5u, m_pModeTargetRes);
+			bindTexture(6u, m_eacTargetRes);
 
-			bindUav( 0u, m_stitchedTarget, PFG_RGBA32_UINT, ResourceAccess::Write );
+			bindUav(0u, m_stitchedTarget, PFG_RGBA32_UINT, ResourceAccess::Write);
 		}
 		else
 		{
-			bindUav( 0u, m_pModeTargetRes, PFG_RG32_UINT, ResourceAccess::ReadWrite );
+			bindUav(0u, m_pModeTargetRes, PFG_RG32_UINT, ResourceAccess::ReadWrite);
 		}
 
-		bindComputePso( m_stitchPso );
-		glDispatchCompute( alignToNextMultiple( m_width, 32u ) / 32u,
-						   alignToNextMultiple( m_height, 32u ) / 32u, 1u );
+		bindComputePso(m_stitchPso);
+		glDispatchCompute(alignToNextMultiple(m_width, 32u) / 32u,
+			alignToNextMultiple(m_height, 32u) / 32u, 1u);
 	}
 	//-------------------------------------------------------------------------
 	void EncoderETC2::execute03()
 	{
 		// Copy "8x8" PFG_RG32_UINT -> 32x32 PFG_ETC1_RGB8_UNORM
 		// Copy "8x8" PFG_RGBA32_UINT -> 32x32 PFG_ETC2_RGBA8_UNORM
-		glCopyImageSubData( hasAlpha() ? m_stitchedTarget : m_pModeTargetRes,  //
-							GL_TEXTURE_2D, 0, 0, 0, 0,                         //
-							m_dstTexture, GL_TEXTURE_2D, 0, 0, 0, 0,           //
-							( GLsizei )( getBlockWidth() ), ( GLsizei )( getBlockHeight() ), 1 );
+		glCopyImageSubData(hasAlpha() ? m_stitchedTarget : m_pModeTargetRes,  //
+			GL_TEXTURE_2D, 0, 0, 0, 0,                         //
+			m_dstTexture, GL_TEXTURE_2D, 0, 0, 0, 0,           //
+			(GLsizei)(getBlockWidth()), (GLsizei)(getBlockHeight()), 1);
 
 		StagingTexture stagingTex =
-			createStagingTexture( getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, false );
-		downloadStagingTexture( m_pModeTargetRes, stagingTex );
+			createStagingTexture(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, false);
+		downloadStagingTexture(m_pModeTargetRes, stagingTex);
 		glFinish();
 	}
 	//-------------------------------------------------------------------------
 	void EncoderETC2::startDownload()
 	{
-		glMemoryBarrier( GL_PIXEL_BUFFER_BARRIER_BIT );
+		glMemoryBarrier(GL_PIXEL_BUFFER_BARRIER_BIT);
 
-		if( m_downloadStaging.bufferName )
-			destroyStagingTexture( m_downloadStaging );
-		m_downloadStaging = createStagingTexture( getBlockWidth(), getBlockHeight(),
-												  hasAlpha() ? PFG_RGBA32_UINT : PFG_RG32_UINT, false );
-		downloadStagingTexture( hasAlpha() ? m_stitchedTarget : m_pModeTargetRes, m_downloadStaging );
+		if (m_downloadStaging.bufferName)
+			destroyStagingTexture(m_downloadStaging);
+		m_downloadStaging = createStagingTexture(getBlockWidth(), getBlockHeight(),
+			hasAlpha() ? PFG_RGBA32_UINT : PFG_RG32_UINT, false);
+		downloadStagingTexture(hasAlpha() ? m_stitchedTarget : m_pModeTargetRes, m_downloadStaging);
 	}
 
 	uint64_t FixByteOrder(uint64_t d)
@@ -187,26 +187,26 @@ namespace betsy
 			((d & 0x0000FF0000000000) << 8);
 	}
 
-	void EncoderETC2::saveToOffset(uint64_t* dst)
+	uint8_t* EncoderETC2::getDownloadData()
 	{
-				// It's unclear which of these 2 barrier bits GL wants in order for glCopyImageSubData to work
-		glMemoryBarrier( GL_TEXTURE_UPDATE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+		glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		// Copy "8x8" PFG_RG32_UINT -> 32x32 PFG_ETC1_RGB8_UNORM
-		glCopyImageSubData( m_compressTargetRes, GL_TEXTURE_2D, 0, 0, 0, 0,  //
-							m_dstTexture, GL_TEXTURE_2D, 0, 0, 0, 0,         //
-							( GLsizei )( getBlockWidth() ), ( GLsizei )( getBlockHeight() ), 1 );
+		glCopyImageSubData(m_compressTargetRes, GL_TEXTURE_2D, 0, 0, 0, 0,  //
+			m_dstTexture, GL_TEXTURE_2D, 0, 0, 0, 0,         //
+			(GLsizei)(getBlockWidth()), (GLsizei)(getBlockHeight()), 1);
 
 		StagingTexture stagingTex =
-			createStagingTexture( getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, false );
-		downloadStagingTexture( m_compressTargetRes, stagingTex );
-		// glFinish();
+			createStagingTexture(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, false);
+		downloadStagingTexture(m_compressTargetRes, stagingTex);
+		glFinish();
 
-		const uint8_t *result = (const uint8_t *)stagingTex.data;
+		return (uint8_t*)stagingTex.data;
+	}
+
+	void EncoderETC2::saveToOffset(uint64_t* dst, uint8_t* result)
+	{
 		uint64_t final_data = 0u;
-		uint8_t mask = 0xC0;
-		unsigned int shift_numer = 24;
-
 		for (size_t b = 0u; b < 1u; ++b)
 		{
 			// base color 

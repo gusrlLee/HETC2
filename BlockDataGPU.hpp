@@ -8,6 +8,7 @@
 
 #include "Bitmap.hpp"
 #include "BlockData.hpp"
+#include "ProcessCommon.hpp"
 
 #include "GL/glcorearb.h"
 
