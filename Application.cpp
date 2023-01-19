@@ -563,12 +563,14 @@ int main( int argc, char** argv )
             errorBlockDataPipeline->pushHighErrorBlocks();
 
             //-------------------------------------------------------------------------
+            start = GetTime();
             TaskDispatch::Queue([&bdg, &errorBlockDataPipeline]() // start GPU encoding 
                 {
                     bdg->ProcessWithGPU(errorBlockDataPipeline);
                 });
-
             TaskDispatch::Sync();
+            end = GetTime();
+            printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
         }
     }
     else
