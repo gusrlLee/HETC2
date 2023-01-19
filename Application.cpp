@@ -413,7 +413,6 @@ int main( int argc, char** argv )
                 {
                     outputElement = outputDir + "/compressed_" + imagePathList[i];
                 }
-                std::cout << "hello world" << std::endl;
 
                 outputElement.replace(outputElement.end() - 3, outputElement.end(), "ktx");
                 std::cout << "Create! : " << outputElement << std::endl;
@@ -521,7 +520,6 @@ int main( int argc, char** argv )
             {
                 type = BlockData::Etc1;
             }
-            auto start = GetTime();
             auto bd = std::make_shared<BlockData>(output, dp.Size(), mipmap, type);
             BlockDataPtr bda;
             if (alpha && dp.Alpha() && !rgba)
@@ -529,6 +527,7 @@ int main( int argc, char** argv )
                 bda = std::make_shared<BlockData>(alpha, dp.Size(), mipmap, type);
             }
 
+            auto start = GetTime();
             for (int i = 0; i < num; i++)
             {
                 auto part = dp.NextPart();
@@ -558,6 +557,9 @@ int main( int argc, char** argv )
             }
 
             TaskDispatch::Sync(); // wait end CPU encoding.
+            auto end = GetTime();
+            printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
+
             errorBlockDataPipeline->pushHighErrorBlocks();
 
             //-------------------------------------------------------------------------
@@ -565,9 +567,7 @@ int main( int argc, char** argv )
                 {
                     bdg->ProcessWithGPU(errorBlockDataPipeline);
                 });
-            
-            auto end = GetTime();
-            printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
+
             TaskDispatch::Sync();
         }
     }
