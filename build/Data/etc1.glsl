@@ -15,6 +15,7 @@
 
 #define FLT_MAX 340282346638528859811704183484516925440.0f
 
+// define quality
 #define cLowQuality 0
 #define cMediumQuality 1
 #define cHighQuality 2
@@ -50,6 +51,7 @@ layout( std430, binding = 1 ) readonly restrict buffer globalBuffer
 layout( r32f, binding = 2 ) uniform restrict writeonly image2D dstError;
 #endif
 
+// compute shader size 
 layout( local_size_x = 4,  //
 		local_size_y = 4,  //
 		local_size_z = 4 ) in;

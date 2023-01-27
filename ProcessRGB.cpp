@@ -3132,7 +3132,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
 }
 
 
-static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool useHeuristics, bool &isHighError, uint8_t &check_mode)
+static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool useHeuristics, bool &isHighError)
 { // add Hyeon
 #ifdef __AVX2__
     uint64_t d = CheckSolid_AVX2(src);
@@ -3155,7 +3155,6 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     auto plane = Planar_AVX2(ch, mode, useHeuristics);
     if (useHeuristics && mode == ModePlanar)
     {
-        check_mode = 2;
         return plane.plane;
     }
 
@@ -3203,12 +3202,10 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
             error = compressBlockTH((uint8_t*)src, luma, compressed[0], compressed[1], tMode, ch.r8, ch.g8, ch.b8);
             if (tMode)
             {
-                check_mode = 0;
                 stuff59bits(compressed[0], compressed[1], compressed[2], compressed[3]);
             }
             else
             {
-                check_mode = 1;
                 stuff58bits(compressed[0], compressed[1], compressed[2], compressed[3]);
             }
 
@@ -4332,13 +4329,8 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
             w = 0;
         }
 
-        // add Hyeon
-        // 0 : T-mode
-        // 1 : H-mode
-        // 2 : P-mode
         bool isHighError = false;
-        uint8_t mode = 0;
-        *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError, mode);
+        *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError);
         if ( isHighError ) 
         {
             *dst = 0;

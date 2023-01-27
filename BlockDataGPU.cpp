@@ -75,7 +75,7 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
             {
                 auto dst = errorBlock.dstAddress[i];
                 m_Encoder.saveToOffset(dst, result);
-                result += 8; // for jump 8bits.
+                result += 8; // for jump 64bits.
             }
         }
     }

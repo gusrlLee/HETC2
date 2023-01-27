@@ -74,7 +74,8 @@ uint quant4( const uint packedRgb )
 {
 	float3 rgbValue = unpackUnorm4x8( packedRgb ).xyz;  // Range [0; 1]
 	rgbValue = floor( rgbValue * 15.0f + 0.5f );        // Convert to 444, range [0; 15]
-	rgbValue = floor( rgbValue * 19.05f );              // Convert to 888, range [0; 255]
+	// rgbValue = floor( rgbValue * 19.05f );              // Convert to 888, range [0; 255]
+	rgbValue = floor( rgbValue * 17.05f );              // Convert to 888, range [0; 255]
 	return packUnorm4x8( float4( rgbValue * ( 1.0f / 255.0f ), 1.0f ) );
 }
 
@@ -82,6 +83,7 @@ uint quant4( float3 rgbValue )
 {
 	rgbValue = floor( rgbValue * 15.0f / 255.0f + 0.5f );  // Convert to 444
 	rgbValue = floor( rgbValue * 19.05f );                 // Convert to 888
+	// rgbValue = floor( rgbValue * 17.05f );                 // Convert to 888
 	return packUnorm4x8( float4( rgbValue * ( 1.0f / 255.0f ), 1.0f ) );
 }
 
