@@ -376,6 +376,8 @@ int main( int argc, char** argv )
     }
     else if ( useBetsy )
     {
+        std::vector<float> timeStamp;
+
         betsy::initBetsyPlatform();
         auto bdg = std::make_shared<BlockDataGPU>();
         auto start = GetTime();
@@ -415,7 +417,8 @@ int main( int argc, char** argv )
                 }
 
                 outputElement.replace(outputElement.end() - 3, outputElement.end(), "ktx");
-                std::cout << "Create! : " << outputElement << std::endl;
+                // for debug
+                // std::cout << "Create! : " << outputElement << std::endl;
 
                 DataProvider dp((inputDir + "/" + imagePathList[i]).c_str(), mipmap, !dxtc, linearize);
                 auto num = dp.NumberOfParts();
@@ -491,7 +494,20 @@ int main( int argc, char** argv )
                         bdg->ProcessWithGPU(errorBlockDataPipeline);
                     });
                 TaskDispatch::Sync();
+                auto end = GetTime();
+
+                float time = (end - start) / 1000.f;
+                std::cout << "output : " << outputElement.c_str() << " compression time = " << time << "ms" << std::endl;
+                timeStamp.push_back(time);
             }
+
+            float sum = 0;
+            for (int i = 0; i < timeStamp.size(); i++)
+            {
+                sum += timeStamp[i];
+            }
+            std::cout << "1 image compression average time = " << sum / timeStamp.size() << "ms" << std::endl;
+            std::cout << "total image = " << timeStamp.size() << " total time = " << sum << "ms" << std::endl;
         } // target file 
         else
         {
