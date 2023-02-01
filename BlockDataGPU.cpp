@@ -27,6 +27,11 @@ BlockDataGPU::BlockDataGPU()
 	m_Quality = 2;
 }
 
+BlockDataGPU::~BlockDataGPU()
+{
+    m_Encoder.deinitResources();
+}
+
 void BlockDataGPU::setEncodingEnv()
 {
     m_Encoder.encoderShaderCompile(Codec::etc2_rgb, false);
@@ -79,6 +84,5 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
             }
         }
     }
-    m_Encoder.deinitResources();
 }
 

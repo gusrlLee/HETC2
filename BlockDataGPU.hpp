@@ -46,6 +46,7 @@ public:
 	};
 
 	BlockDataGPU();
+	~BlockDataGPU();
 
 	void initGPU(const char* input);
 	void setEncodingEnv();

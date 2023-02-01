@@ -484,9 +484,15 @@ int main( int argc, char** argv )
                     }
                 }
                 TaskDispatch::Sync();
+                // push block vector 
+                errorBlockDataPipeline->pushHighErrorBlocks();
+                TaskDispatch::Queue([&bdg, &errorBlockDataPipeline]() // start GPU encoding 
+                    {
+                        bdg->ProcessWithGPU(errorBlockDataPipeline);
+                    });
+                TaskDispatch::Sync();
             }
-        }
-        // target file 
+        } // target file 
         else
         {
             DataProvider dp(input, mipmap, !dxtc, linearize);
