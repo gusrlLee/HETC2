@@ -501,6 +501,7 @@ int main( int argc, char** argv )
                 timeStamp.push_back(time);
             }
 
+            // print result time 
             float sum = 0;
             for (int i = 0; i < timeStamp.size(); i++)
             {
