@@ -70,7 +70,7 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
             while (repeat--)
             {
                 m_Encoder.execute00();
-                m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(2)); // high Quality
+                m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
                 m_Encoder.execute02();
             }
 

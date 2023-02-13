@@ -176,22 +176,22 @@ uint quant4( const uint packedRgb )
 	float3 rgbValue = unpackUnorm4x8( packedRgb ).xyz;  // Range [0; 1]
 	rgbValue = floor( rgbValue * 15.0f + 0.5f );        // Convert to 444, range [0; 15]
 	// rgbValue = floor( rgbValue * 19.05f );              // Convert to 888, range [0; 255]
-	rgbValue = floor( rgbValue * 17.05f );
+	rgbValue = floor( rgbValue * 17.05f );              // Convert to 888, range [0; 255]
 	return packUnorm4x8( float4( rgbValue * ( 1.0f / 255.0f ), 1.0f ) );
 }
 
 uint quant4( float3 rgbValue )
 {
 	rgbValue = floor( rgbValue * 15.0f / 255.0f + 0.5f );  // Convert to 444
-	// rgbValue = floor( rgbValue * 19.05f );                 // Convert to 888
-	rgbValue = floor( rgbValue * 17.05f );
+	// rgbValue = floor( rgbValue * 19.05f );              // Convert to 888, range [0; 255]
+	rgbValue = floor( rgbValue * 17.05f );              // Convert to 888, range [0; 255]
 	return packUnorm4x8( float4( rgbValue * ( 1.0f / 255.0f ), 1.0f ) );
 }
 
 float calcError( const uint colour0, const uint colour1 )
 {
 	float3 diff = unpackUnorm4x8( colour0 ).xyz - unpackUnorm4x8( colour1 ).xyz;
-	//return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
+	// return dot( diff, diff ) * 65025.0f; // 65025 = 255 * 255
 	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
 }
 
@@ -208,15 +208,27 @@ uint addSat( const uint packedRgb, float value )
 float etc2_th_mode_calcError( const bool hMode, const uint c0, const uint c1, float distance )
 {
 	uint paintColors[4];
-
-	if( !hMode )
+	if( !hMode ) // T mode 
 	{
 		paintColors[0] = c0;
 		paintColors[1] = addSat( c1, distance );
 		paintColors[2] = c1;
 		paintColors[3] = addSat( c1, -distance );
+		
+		// uint top_left_base_color = min(paintColors[1], paintColors[2]);
+		// uint top_right_base_color = max(paintColors[1], paintColors[2]);
+		// uint top_mid_base_color = uint(top_right_base_color - top_left_base_color / 2);
+
+		// uint threshold = 10000;
+		// // T 모드 경우, distance를 더했을 때 오차가 너무 크게 존재를 한다면 적당한 threshold를 주어
+		// // mid point로 설정을 다시해서 연산을 진행하도록 한다. 
+		// if ((top_right_base_color-top_left_base_color) > threshold) {
+		// 	paintColors[1] = addSat(top_mid_base_color, distance);
+		// 	paintColors[2] = top_mid_base_color;
+		// 	paintColors[3] = addSat(top_mid_base_color, -distance);
+		// }
 	}
-	else
+	else // H mode 
 	{
 		// We don't care about swapping c0 & c1 because we're only calculating error
 		// and both variations produce the same result
@@ -224,6 +236,39 @@ float etc2_th_mode_calcError( const bool hMode, const uint c0, const uint c1, fl
 		paintColors[1] = addSat( c0, -distance );
 		paintColors[2] = addSat( c1, distance );
 		paintColors[3] = addSat( c1, -distance );
+
+		// uint top_left_base_color = min(paintColors[0], paintColors[1]);
+		// uint top_right_base_color = max(paintColors[0], paintColors[1]);
+		// uint top_mid_base_color = uint(top_right_base_color - top_left_base_color / 2);
+
+		// uint bottom_left_base_color = min(paintColors[2], paintColors[3]);
+		// uint bottom_right_base_color = max(paintColors[2], paintColors[3]);
+		// uint bottom_mid_base_color = uint(bottom_right_base_color - bottom_left_base_color / 2);
+
+		// uint threshold = 10000;
+		// uint top_diff = top_right_base_color - top_left_base_color;
+		// uint bottom_diff = bottom_right_base_color - bottom_left_base_color;
+
+		// if (top_diff > threshold && bottom_diff > threshold) {
+		// 	paintColors[0] = addSat(top_mid_base_color, distance);
+		// 	paintColors[1] = addSat(top_mid_base_color, -distance);
+		// 	paintColors[2] = addSat(bottom_mid_base_color, distance);
+		// 	paintColors[3] = addSat(bottom_mid_base_color, -distance);
+		// }
+		// else if (top_diff > threshold &&  bottom_diff < threshold) {
+		// 	paintColors[0] = addSat(top_mid_base_color, distance);
+		// 	paintColors[1] = addSat(top_mid_base_color, -distance);
+		// }
+		// else if (top_diff < threshold && bottom_diff > threshold) {
+		// 	paintColors[2] = addSat(bottom_mid_base_color, distance);
+		// 	paintColors[3] = addSat(bottom_mid_base_color, -distance);
+		// }
+		// else {
+		// 	paintColors[0] = addSat( c0, distance );
+		// 	paintColors[1] = addSat( c0, -distance );
+		// 	paintColors[2] = addSat( c1, distance );
+		// 	paintColors[3] = addSat( c1, -distance );
+		// }
 	}
 
 	float errAcc = 0;
@@ -304,19 +349,34 @@ uint etc2_gen_header_h_mode( const uint colour0, const uint colour1, const uint 
 void etc2_th_mode_write( const bool hMode, uint c0, uint c1, float distance, uint distIdx )
 {
 	uint paintColors[4];
+	uint temp = 0;
 
 	uint2 outputBytes;
 
-	if( !hMode )
+	if( !hMode ) // T mode 
 	{
+		// T mode를 실행하면 먼저 값에 대한 distance를 더해서 T 자로 만들어 준다. 
 		outputBytes.x = etc2_gen_header_t_mode( c0, c1, distIdx );
 
 		paintColors[0] = c0;
 		paintColors[1] = addSat( c1, distance );
 		paintColors[2] = c1;
 		paintColors[3] = addSat( c1, -distance );
+
+		// uint top_left_base_color = min(paintColors[1], paintColors[2]);
+		// uint top_right_base_color = max(paintColors[1], paintColors[2]);
+		// uint top_mid_base_color = uint(top_right_base_color - top_left_base_color / 2);
+		// uint threshold = 10000;
+		// if ((top_right_base_color-top_left_base_color) > threshold) {
+		// 	paintColors[1] = addSat(top_mid_base_color, distance);
+		// 	paintColors[2] = top_mid_base_color;
+		// 	paintColors[3] = addSat(top_mid_base_color, -distance);
+		// }
+
+		// outputBytes.x = etc2_gen_header_t_mode( c0, top_mid_base_color, distIdx );
+
 	}
-	else
+	else // H mode 
 	{
 		bool bShouldSwap;
 		outputBytes.x = etc2_gen_header_h_mode( c0, c1, distIdx, bShouldSwap );
@@ -333,6 +393,45 @@ void etc2_th_mode_write( const bool hMode, uint c0, uint c1, float distance, uin
 		paintColors[1] = addSat( c0, -distance );
 		paintColors[2] = addSat( c1, distance );
 		paintColors[3] = addSat( c1, -distance );
+
+		// uint top_left_base_color = min(paintColors[0], paintColors[1]);
+		// uint top_right_base_color = max(paintColors[0], paintColors[1]);
+		// uint top_mid_base_color = uint(top_right_base_color - top_left_base_color / 2);
+
+		// uint bottom_left_base_color = min(paintColors[2], paintColors[3]);
+		// uint bottom_right_base_color = max(paintColors[2], paintColors[3]);
+		// uint bottom_mid_base_color = uint(bottom_right_base_color - bottom_left_base_color / 2);
+		// temp = uint(bottom_right_base_color - bottom_left_base_color);
+
+		// uint threshold = 10000;
+
+		// uint top_diff = top_right_base_color - top_left_base_color;
+		// uint bottom_diff = bottom_right_base_color - bottom_left_base_color;
+
+		// if (top_diff > threshold && bottom_diff > threshold) {
+		// 	outputBytes.x = etc2_gen_header_h_mode( top_mid_base_color, bottom_mid_base_color, distIdx, bShouldSwap );
+		// 	paintColors[0] = addSat(top_mid_base_color, distance);
+		// 	paintColors[1] = addSat(top_mid_base_color, -distance);
+		// 	paintColors[2] = addSat(bottom_mid_base_color, distance);
+		// 	paintColors[3] = addSat(bottom_mid_base_color, -distance);
+		// }
+		// else if (top_diff > threshold && bottom_diff < threshold) {
+		// 	outputBytes.x = etc2_gen_header_h_mode( top_mid_base_color, c1, distIdx, bShouldSwap );
+		// 	paintColors[0] = addSat(top_mid_base_color, distance);
+		// 	paintColors[1] = addSat(top_mid_base_color, -distance);
+		// }
+		// else if (top_diff < threshold && bottom_diff > threshold) {
+		// 	outputBytes.x = etc2_gen_header_h_mode( c0, bottom_mid_base_color, distIdx, bShouldSwap );
+		// 	paintColors[2] = addSat(bottom_mid_base_color, distance);
+		// 	paintColors[3] = addSat(bottom_mid_base_color, -distance);
+		// }
+		// else {
+		// 	outputBytes.x = etc2_gen_header_h_mode( c0, c1, distIdx, bShouldSwap );
+		// 	paintColors[0] = addSat( c0, distance );
+		// 	paintColors[1] = addSat( c0, -distance );
+		// 	paintColors[2] = addSat( c1, distance );
+		// 	paintColors[3] = addSat( c1, -distance );
+		// }
 	}
 
 	outputBytes.y = 0u;
@@ -344,6 +443,7 @@ void etc2_th_mode_write( const bool hMode, uint c0, uint c1, float distance, uin
 
 		for( uint idx = 0u; idx < 4u; ++idx )
 		{
+			// error 를 체크하여 가장 적은 에러를 골라냄.
 			const float dist = calcError( g_srcPixelsBlock[k], paintColors[idx] );
 			if( dist < bestDist )
 			{
@@ -351,7 +451,7 @@ void etc2_th_mode_write( const bool hMode, uint c0, uint c1, float distance, uin
 				bestIdx = idx;
 			}
 		}
-
+		// 가장 적은 에러를 가지는 것을 이미지에 저장을 한다. 
 		// When k < 8 write bestIdx to region bits [8; 16) and [24; 32)
 		// When k >= 8 write bestIdx to region bits [0; 8) and [16; 24)
 		const uint bitStart0 = k < 8 ? 8u : 0u;
@@ -362,10 +462,23 @@ void etc2_th_mode_write( const bool hMode, uint c0, uint c1, float distance, uin
 
 	const uint2 dstUV = gl_WorkGroupID.xy;
 	imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
+	// imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
+	// if (!hMode)
+	// 	imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
+	// else
+	// 	imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
+	// imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
 }
+
+
+// local size 
+// layout( local_size_x = 8,    //
+// 		local_size_y = 120,  // 15 + 14 + 13 + ... + 1
+// 		local_size_z = 1 ) in;
 
 void main()
 {
+	// 만약 개수가 즉, 여기서도 thread의 개수를 960개 수행.
 	if( gl_LocalInvocationIndex < 16u )
 	{
 		const uint2 pixelsToLoadBase = gl_WorkGroupID.xy << 2u;
@@ -385,6 +498,9 @@ void main()
 	// So we assign 1 thread to each
 	const uint distIdx = gl_LocalInvocationID.x;
 
+	// 처음 가지고 온 base color 
+	// 계산을 하기 위한 초기 값들을 setting 
+	// thread를 이용해서 앞서 구했던 모든 120가지의 색상을 모두 이용하는 것을 확인. 
 	const uint2 c0c1 =
 		OGRE_imageLoad2DArray( c0c1Texture, uint3( gl_WorkGroupID.xy, gl_LocalInvocationID.y ) ).xy;
 	const uint c0 = c0c1.x;
@@ -397,9 +513,12 @@ void main()
 
 	float err;
 
+	// ETC2에서 지정된 distance lookup table을 이용하는 것을 확인. 
+	// thread.x 가 8개 이므로 kDistance에 선언된 8개의 dist를 모두 비교해 볼 수 있음. 
 	const float distance = kDistances[distIdx];
 
 	// T modes (swapping c0 / c1 makes produces different result)
+	// 각 T mode를 대입할때 c0, c1의 자리를 바꾸어 가며 연산을 진행하는 것을 확인.
 	err = etc2_th_mode_calcError( false, c0, c1, distance );
 	if( err < minErr )
 	{
@@ -478,5 +597,6 @@ void main()
 
 		const uint2 dstUV = gl_WorkGroupID.xy;
 		imageStore( dstError, int2( dstUV ), float4( g_bestCandidates[0].x, 0.0f, 0.0f, 0.0f ) );
+		// imageStore( dstError, int2( dstUV ), float4( 0.0f, 0.0f, 0.0f, 0.0f ) );
 	}
 }

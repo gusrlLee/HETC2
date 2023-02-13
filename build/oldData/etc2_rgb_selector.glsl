@@ -39,8 +39,6 @@ layout( rg32ui, binding = 0 ) uniform restrict uimage2D inOutPMode;
 #	define outputValue uint4( etcRgb.xy, 0u, 0u )
 #endif
 
-#define FLT_MAX 340282346638528859811704183484516925440.0f
-
 void main()
 {
 	const float errorEtc1 = OGRE_Load2D( texErrorEtc1, int2( gl_GlobalInvocationID.xy ), 0 ).x;
@@ -56,7 +54,7 @@ void main()
 		const uint2 etcRgb = OGRE_Load2D( srcEtc1, int2( gl_GlobalInvocationID.xy ), 0 ).xy;
 		imageStore( dstTexture, int2( gl_GlobalInvocationID.xy ), outputValue );
 	}
-	else if( errorThModes < errorPMode )
+ 	else if( errorThModes < errorPMode )
 	{
 		const uint2 etcRgb = OGRE_Load2D( srcThModes, int2( gl_GlobalInvocationID.xy ), 0 ).xy;
 		imageStore( dstTexture, int2( gl_GlobalInvocationID.xy ), outputValue );

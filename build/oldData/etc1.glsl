@@ -15,6 +15,7 @@
 
 #define FLT_MAX 340282346638528859811704183484516925440.0f
 
+// define quality
 #define cLowQuality 0
 #define cMediumQuality 1
 #define cHighQuality 2
@@ -50,6 +51,7 @@ layout( std430, binding = 1 ) readonly restrict buffer globalBuffer
 layout( r32f, binding = 2 ) uniform restrict writeonly image2D dstError;
 #endif
 
+// compute shader size 
 layout( local_size_x = 4,  //
 		local_size_y = 4,  //
 		local_size_z = 4 ) in;
@@ -99,7 +101,7 @@ float calcError( float3 a, float3 b )
 {
 	float3 diff = a - b;
 	// return dot( diff, diff );
-	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
+	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f);
 }
 
 bool evaluate_solution( const uint subblockStart, const float3 blockRgbInt, const bool bUseColor4,
@@ -328,6 +330,8 @@ float selector_index_to_etc1( float idx )
 // Packs solid color blocks efficiently using a set of small precomputed tables.
 // For random 888 inputs, MSE results are better than Erricson's ETC1 packer in "slow" mode ~9.5% of
 // the time, is slightly worse only ~.01% of the time, and is equal the rest of the time.
+// 색상이 모두 같다면 수행되는 함수. 
+// srcPixel은 픽셀을 비교한 srcPixel0가 argument로 들어온다. 
 void pack_etc1_block_solid_color( const float3 srcPixel )
 {
 	float bestError = FLT_MAX, bestPacked_c1 = 0, bestPacked_c2 = 0;
@@ -337,15 +341,23 @@ void pack_etc1_block_solid_color( const float3 srcPixel )
 	// configurations that allow that 8-bit value to be encoded with no error.
 	for( uint i = 0u; i < 3u && bestError > 0; ++i )
 	{
+		// c0는 그대로 그 값을 x, y, z 순으로 순차적으로 대입. 밑의 대입 순서는 모든 경우의 수를 돌려가며 대입을 하여 비교.
 		const float c0 = srcPixel[i];
+		// i 가 0이면 y값. 그리고 1이면 z값을 대입. 
 		const uint c1 = uint( i == 0u ? srcPixel.y : ( i == 1u ? srcPixel.z : srcPixel.x ) );
+		// i 가 0이면 z값. 그리고 1이면 x값을 대입. 
 		const uint c2 = uint( i == 0u ? srcPixel.z : ( i == 1u ? srcPixel.x : srcPixel.y ) );
+		// 위의 숫자로 c1, c2를 구하는 연산.
 
 		const float deltaRange = 1.0f;
+		// -1 < range < 1 범위로 계산.
 		for( float delta = -deltaRange; delta <= deltaRange && bestError > 0; ++delta )
 		{
+			// distance를 지정.
 			const float c_plus_delta = clamp( c0 + delta, 0.0f, 255.0f );
 
+			// table offset을 생각을 해야함. 
+			// 불분명하지만 어떤 look up table에 선언된 index를 가지고 오는 것으로 판단. 
 			uint tableOffset;
 			if( c_plus_delta == 0.0f )
 				tableOffset = 0u;
@@ -354,7 +366,10 @@ void pack_etc1_block_solid_color( const float3 srcPixel )
 			else
 				tableOffset = uint( 66.0f + ( c_plus_delta - 1.0f ) * 11.0f );
 
+			// table에서 받아온 변수 저장. 
 			const uint numTableEntries = pBuff_color8_to_etc_block_config[tableOffset];
+			// 받아온 값으로 for loop 수행함. 
+			// 미리 precomputed 된 look up table을 이용해서 값을 할당. 
 			for( uint j = 0u; j < numTableEntries && bestError > 0; ++j )
 			{
 				const uint x = pBuff_color8_to_etc_block_config[tableOffset + j + 1u];
@@ -366,6 +381,7 @@ void pack_etc1_block_solid_color( const float3 srcPixel )
 											   floor( p1 * ( 1.0f / 256.0f ) ),  //
 											   floor( p2 * ( 1.0f / 256.0f ) ) );
 				const float trialError = dot( diffVal, diffVal );
+				// 오차율이 가장 적은 것을 선택하여 error를 계산, 그 후 가장 적은 오차를 가지는 것을 return 
 				if( trialError < bestError )
 				{
 					bestError = trialError;
@@ -378,29 +394,35 @@ void pack_etc1_block_solid_color( const float3 srcPixel )
 		}
 	}
 
+	// diff bit와 code book 에 대한 index를 선언 
 	const float diff = float( best_x & 1u );
 	const float inten = float( ( best_x >> 1u ) & 7u );
 
 	float4 bytes;
 	uint2 outputBytes;
 
+	// inten은 8비트로 만들고 << 2 연산, 그리고 diff 1비트 선언한다음 << 1연산. 
 	bytes.w = ( inten + ( inten * 8.0f ) ) * 4.0f + diff * 2.0f;
 
 	const float bestPacked_c0 = float( ( best_x >> 8 ) & 255u );
 	float3 bestPacked = float3( bestPacked_c0, bestPacked_c1, bestPacked_c2 );
-	if( diff != 0.0f )
-		bestPacked = bestPacked * 8.0f;
+	// 앞의 base color를 선언해주는 연산.
+	if( diff != 0.0f ) // not diff bit check
+		bestPacked = bestPacked * 8.0f; // << 3 shift  
 	else
-		bestPacked = bestPacked + bestPacked * 16.0f;
+		bestPacked = bestPacked + bestPacked * 16.0f; // << 4 shift 
 
+	// base color중 가장 오류가 적은 index를 이용하여 색깔 지정.
 	bytes.xyz = best_i == 0u ? bestPacked.xyz : ( best_i == 1u ? bestPacked.zxy : bestPacked.yzx );
 
+	// bit를 저장하는 부분. 
 	const float etc1Selector = selector_index_to_etc1( float( ( best_x >> 4u ) & 3u ) );
 	outputBytes.x = packUnorm4x8( bytes * ( 1.0f / 255.0f ) );
 	outputBytes.y = ( etc1Selector >= 2u ? 0xFFFFu : 0u ) |
 					( ( etc1Selector == 1.0f || etc1Selector == 3.0f ) ? 0xFFFF0000u : 0u );
 
 	uint2 dstUV = gl_GlobalInvocationID.yz;
+	// result save 
 	imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
 
 #ifdef OUTPUT_ERROR
@@ -525,6 +547,7 @@ void main()
 	uint2 pixelsToLoad = pixelsToLoadBase;
 	pixelsToLoad.y += blockThreadId;
 
+	// 데이터를 가지고 오는 부분. 
 	const float3 srcPixels0 = OGRE_Load2D( srcTex, int2( pixelsToLoad ), 0 ).xyz;
 	const float3 srcPixels1 = OGRE_Load2D( srcTex, int2( pixelsToLoad + uint2( 1u, 0u ) ), 0 ).xyz;
 	const float3 srcPixels2 = OGRE_Load2D( srcTex, int2( pixelsToLoad + uint2( 2u, 0u ) ), 0 ).xyz;
@@ -551,15 +574,18 @@ void main()
 	g_srcPixelsBlock[subblockStart1 + 4u] = packUnorm4x8( float4( srcPixels3, 1.0f ) );
 
 	const uint pixelsEqualBlockStart = ( gl_LocalInvocationID.y + gl_LocalInvocationID.z * 4u ) * 4u;
+	// 같은 색상의 픽셀인지 검사. -> bool 값으로 판단. 
 	bool bAllPixelsInThreadEqual =
 		srcPixels0 == srcPixels1 && srcPixels0 == srcPixels2 && srcPixels0 == srcPixels3;
 	g_allPixelsEqual[pixelsEqualBlockStart + blockThreadId] = bAllPixelsInThreadEqual;
 
 	__sharedOnlyBarrier;
 
+	// 첫번째 thread들이 모든 값에 대한 즉, x=0일때 다른 것들도 모두 수행.
 	if( blockThreadId == 0u )
 	{
 		// Thread 0 finishes checking if all pixels are equal
+		// 각 thread에서 색깔을 다시 판단 후 bool 값을 설정.
 		for( uint i = 1u; i < 4u; ++i )
 		{
 			bAllPixelsInThreadEqual =
@@ -569,11 +595,13 @@ void main()
 			const float3 otherPixels = unpackUnorm4x8( g_srcPixelsBlock[blockStart + i] ).xyz;
 			bAllPixelsInThreadEqual = bAllPixelsInThreadEqual && srcPixels0 == otherPixels;
 		}
+		// 그리고 start index에다가 bool값을 저장.
 		g_allPixelsEqual[pixelsEqualBlockStart] = bAllPixelsInThreadEqual;
 	}
 
 	__sharedOnlyBarrier;
 
+	// 값을 저장하는 result, init working
 	PotentialSolution results[2];
 	for( uint i = 0u; i < 2u; ++i )
 	{
@@ -585,6 +613,7 @@ void main()
 	}
 
 	// Check if all colours are equal. If so we can improve quality
+	// 만약 색깔이 모두 같다면 그냥 바로 float -> int로 바꾸어 연산을 진행하여 compression 진행.
 	const bool bAllColoursEqual = g_allPixelsEqual[pixelsEqualBlockStart];
 	if( bAllColoursEqual )
 	{
@@ -841,9 +870,9 @@ void main()
 #endif
 
 		uint2 dstUV = gl_GlobalInvocationID.yz;
+		// origin
 		imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
-		//imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
-		
+		// imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
 #ifdef OUTPUT_ERROR
 		imageStore( dstError, int2( dstUV ),
 					float4( results[0].error + results[1].error, 0.0f, 0.0f, 0.0f ) );

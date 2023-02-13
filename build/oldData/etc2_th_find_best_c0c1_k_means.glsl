@@ -15,6 +15,8 @@ layout( local_size_x = 120,  //
 		local_size_y = 4,    //
 		local_size_z = 2 ) in;
 
+#define FLT_MAX 340282346638528859811704183484516925440.0f
+
 /*
 kLocalInvocationToPixIdx table generated with:
 	int main()
@@ -73,7 +75,7 @@ uint quant4( const uint packedRgb )
 	float3 rgbValue = unpackUnorm4x8( packedRgb ).xyz;  // Range [0; 1]
 	rgbValue = floor( rgbValue * 15.0f + 0.5f );        // Convert to 444, range [0; 15]
 	// rgbValue = floor( rgbValue * 19.05f );              // Convert to 888, range [0; 255]
-	rgbValue = floor( rgbValue * 17.05f );
+	rgbValue = floor( rgbValue * 17.05f );              // Convert to 888, range [0; 255]
 	return packUnorm4x8( float4( rgbValue * ( 1.0f / 255.0f ), 1.0f ) );
 }
 
@@ -81,14 +83,14 @@ uint quant4( float3 rgbValue )
 {
 	rgbValue = floor( rgbValue * 15.0f / 255.0f + 0.5f );  // Convert to 444
 	// rgbValue = floor( rgbValue * 19.05f );                 // Convert to 888
-	rgbValue = floor( rgbValue * 17.05f );
+	rgbValue = floor( rgbValue * 17.05f );                 // Convert to 888
 	return packUnorm4x8( float4( rgbValue * ( 1.0f / 255.0f ), 1.0f ) );
 }
 
 float calcError( const uint colour0, const uint colour1 )
 {
 	float3 diff = unpackUnorm4x8( colour0 ).xyz - unpackUnorm4x8( colour1 ).xyz;
-	// return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
+	// return dot( diff, diff ) * 65025.0f; // 65025 = 255 * 255
 	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
 }
 
@@ -113,7 +115,12 @@ void block_main_colors_find( out uint outC0, out uint outC1, uint c0, uint c1 )
 		int cluster0_cnt = 0, cluster1_cnt = 0;
 		int cluster0[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 		int cluster1[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-		float maxDist0 = 0, maxDist1 = 0;
+		float minDist0 = FLT_MAX, maxDist0 = 0;
+		float minDist1 = FLT_MAX, maxDist1 = 0;
+
+		int minDist0_idx = 0, maxDist0_idx = 0;
+		int minDist1_idx = 0, maxDist1_idx = 0;
+		
 
 		// k-means assignment step
 		for( int k = 0; k < 16; ++k )
@@ -124,11 +131,30 @@ void block_main_colors_find( out uint outC0, out uint outC1, uint c0, uint c1 )
 			{
 				cluster0[cluster0_cnt++] = k;
 				maxDist0 = max( dist0, maxDist0 );
+				if (minDist0 > dist0) {
+					minDist0 = dist0;
+					minDist0_idx = k;
+				}
+
+				if (maxDist0 < dist0) {
+					maxDist0 = dist0;
+					maxDist0_idx = k;
+				}
+
 			}
 			else
 			{
 				cluster1[cluster1_cnt++] = k;
 				maxDist1 = max( dist1, maxDist1 );
+				if (minDist1 > dist1) {
+					minDist1 = dist1;
+					minDist1_idx = k;
+				}
+
+				if (maxDist1 < dist1) {
+					maxDist1 = dist1;
+					maxDist1_idx = k;
+				}
 			}
 		}
 
@@ -138,7 +164,19 @@ void block_main_colors_find( out uint outC0, out uint outC1, uint c0, uint c1 )
 			// Actually we did not find the best match. But set this flag to abort
 			// the loop and keep on going with the original colours (using 'break'
 			// makes compilers go crazy)
-			bestMatchFound = true;
+			// bestMatchFound = true;
+			if (cluster0_cnt > 0) {
+				float3 rgb0 = getSrcPixel(maxDist0_idx);
+				float3 rgb1 = getSrcPixel(minDist0_idx);
+				c0 = quant4(rgb0);
+				c1 = quant4(rgb1);
+			}
+			else { // if cluster1_cnt > 0
+				float3 rgb0 = getSrcPixel(maxDist1_idx);
+				float3 rgb1 = getSrcPixel(minDist1_idx);
+				c0 = quant4(rgb0);
+				c1 = quant4(rgb1);
+			}
 		}
 		else
 		{
@@ -184,6 +222,15 @@ void block_main_colors_find( out uint outC0, out uint outC1, uint c0, uint c1 )
 	outC1 = c1;
 }
 
+// hyeon add 
+// struct baseColorCandidate {
+// 	float error;
+// 	uint c0;
+// 	uint c1;
+// };
+
+// shared baseColorCandidate g_threadBaseColorCandidate[120];
+
 void main()
 {
 	const uint pix0 = kLocalInvocationToPixIdx[gl_LocalInvocationID.x].x;
@@ -192,6 +239,9 @@ void main()
 	uint c0 = quant4( getSrcPixel( pix0 ) * 255.0f );
 	uint c1 = quant4( getSrcPixel( pix1 ) * 255.0f );
 
+	// uint ori_c0 = quant4( getSrcPixel( pix0 ) * 255.0f );
+	// uint ori_c1 = quant4( getSrcPixel( pix1 ) * 255.0f );
+
 	if( c0 != c1 )
 	{
 		uint newC0, newC1;
@@ -199,7 +249,32 @@ void main()
 		c0 = newC0;
 		c1 = newC1;
 	}
+	// const uint thisThreadLocalIdx = gl_LocalInvocationID.x;
+	// float difference = calcError(ori_c0, c0) + calcError(ori_c1, c1);
+	// g_threadBaseColorCandidate[thisThreadLocalIdx] = baseColorCandidate(difference, c0, c1);
 
+	// __sharedOnlyBarrier;
+
+	// int bestIndex = 0;
+	// uint best_c0 = 0;
+	// uint best_c1 = 0;
+	// float minimum_err = 9999999;
 	const uint2 dstUV = gl_GlobalInvocationID.yz;
+
+	// if (gl_LocalInvocationID.x == 0u && gl_LocalInvocationID.y == 0u && gl_LocalInvocationID.z == 0u ) {
+	// 	for ( int i = 0; i < 120; i++ ){
+	// 		if (g_threadBaseColorCandidate[i].error == 0) {
+	// 			imageStore( dstTexture, int3( dstUV, i ), uint4(g_threadBaseColorCandidate[i].c0 , g_threadBaseColorCandidate.c1, 0u, 0u ) );
+	// 			break;
+	// 		}
+	// 		if (g_threadBaseColorCandidate[i] < minimum_err) {
+	// 			minimum_err = g_threadBaseColorCandidate[i].error;
+	// 			bestIndex = i;
+	// 			best_c0 = g_threadBaseColorCandidate[i].c0;
+	// 			best_c1 = g_threadBaseColorCandidate[i].c1;
+	// 		}
+	// 	}
+	// 	imageStore( dstTexture, int3( dstUV, bestIndex ), uint4( best_c0, best_c1, 0u, 0u ) );
+	// }
 	imageStore( dstTexture, int3( dstUV, gl_LocalInvocationID.x ), uint4( c0, c1, 0u, 0u ) );
 }

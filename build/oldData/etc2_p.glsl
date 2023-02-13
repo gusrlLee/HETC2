@@ -142,7 +142,7 @@ float calcError( const float3 colour0, const float3 colour1 )
 {
 	float3 diff = colour0.xyz - colour1.xyz;
 	// return dot( diff, diff );
-	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
+	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f);
 }
 
 float calcErrorPMode( float3 cO, float3 cH, float3 cV )
@@ -204,6 +204,7 @@ void etc2_planar_mode_write( const float3 cO, const float3 cH, const float3 cV )
 	const uint2 dstUV = ( gl_WorkGroupID.xy << 1u ) +
 						uint2( gl_LocalInvocationID.z & 0x01u, gl_LocalInvocationID.z >> 1u );
 	imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
+	// imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
 }
 
 /** Uses a Simple Linear Regression to find the best curve that fits all 4 samples in a row
