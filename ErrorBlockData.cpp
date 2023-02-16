@@ -43,13 +43,13 @@ ErrorBlock ErrorBlockData::getHighErrorBlocks()
 
 unsigned int ErrorBlockData::getSize()
 {
-	std::lock_guard<std::mutex> lock(blockMutex);
+	std::lock_guard<std::mutex> lock(pipelineMutex);
 	return m_Pipeline.size();
 }
 
 bool ErrorBlockData::isEmpty()
 {
-	std::lock_guard<std::mutex> lock(blockMutex);
+	std::lock_guard<std::mutex> lock(pipelineMutex);
 	return m_Pipeline.empty();
 }
 

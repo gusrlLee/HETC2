@@ -34,55 +34,45 @@ BlockDataGPU::~BlockDataGPU()
 
 void BlockDataGPU::setEncodingEnv()
 {
-    m_Encoder.encoderShaderCompile(Codec::etc2_rgb, false);
+    m_Encoder.encoderShaderCompile(false, false);
     glFinish();
 }
 
 void BlockDataGPU::initGPU(const char* input)
 {
     betsy::CpuImage cpuImage = betsy::CpuImage(input);
-    m_Encoder.initResources(cpuImage, Codec::etc2_rgb, false);
+    m_Encoder.initResources(cpuImage, false, false);
     glFinish(); // wait initResource
 }
 
 void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
 {
-    while (true)
+
+    size_t repeat = 1u;
+    ErrorBlock errorBlock = pipeline->getHighErrorBlocks();
+
+    int w = 4;
+    int h = 4 * errorBlock.dstAddress.size();
+    int c = 3;
+    int arraySize = w * h * c;
+
+    betsy::CpuImage cpuImage = betsy::CpuImage(errorBlock.srcBuffer.data(), arraySize, w, h, c);
+    m_Encoder.initResources(cpuImage, false, false);
+
+    while (repeat--)
     {
-        size_t repeat = 1u;
-        
-        unsigned int remainder = pipeline->getNumTasks();
-        if ((remainder == 0u) && pipeline->isEmpty())
-        {
-            break;
-        }
-        else
-        {
-            ErrorBlock errorBlock = pipeline->getHighErrorBlocks();
-            int w = 4;
-            int h = 4 * errorBlock.dstAddress.size();
-            int c = 3;
-            int arraySize = w * h * c;
+        m_Encoder.execute00();
+        m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
+        m_Encoder.execute02();
+    }
 
-            betsy::CpuImage cpuImage = betsy::CpuImage(errorBlock.srcBuffer.data(), arraySize, w, h, c);
-            m_Encoder.initResources(cpuImage, Codec::etc2_rgb, false);
-
-            while (repeat--)
-            {
-                m_Encoder.execute00();
-                m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
-                m_Encoder.execute02();
-            }
-
-            uint8_t* result = m_Encoder.getDownloadData();
-            uint32_t offset = 0u;
-            for (int i=errorBlock.dstAddress.size() - 1; i>=0; --i)
-            {
-                auto dst = errorBlock.dstAddress[i];
-                m_Encoder.saveToOffset(dst, result);
-                result += 8; // for jump 64bits.
-            }
-        }
+    uint8_t* result = m_Encoder.getDownloadData();
+    uint32_t offset = 0u;
+    for (int i=errorBlock.dstAddress.size() - 1; i>=0; --i)
+    {
+        auto dst = errorBlock.dstAddress[i];
+        m_Encoder.saveToOffset(dst, result);
+        result += 8; // for jump 64bits.
     }
 }
 

@@ -389,38 +389,39 @@ int main( int argc, char** argv )
         printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
         TaskDispatch taskDispatch(cpus);
         auto errorBlockDataPipeline = std::make_shared<ErrorBlockData>();
-        
+        BlockDataPtr priorBd;
         // CPU encoding with Multi processing 
         //-------------------------------------------------------------------------
 
         // Target directroy
         if ( isTargetDir ) 
         {
+            bool once = false; 
             if ((handle = _findfirst(output, &fd)) == -1L)
             {
                 std::cout << "Make output directory : " << output << std::endl;
                 mkdir(output);
             }
 
-            for (int i = 0; i < imagePathList.size(); i++)
-            {   
+            for (int t = 0; t < imagePathList.size(); t++)
+            {
                 std::string inputDir = input;
                 std::string outputDir = output;
                 std::string outputElement;
-                if (outputDir.at(outputDir.length()-1) == '/')
+                if (outputDir.at(outputDir.length() - 1) == '/')
                 {
-                    outputElement = outputDir + "compressed_" + imagePathList[i];
+                    outputElement = outputDir + "compressed_" + imagePathList[t];
                 }
                 else
                 {
-                    outputElement = outputDir + "/compressed_" + imagePathList[i];
+                    outputElement = outputDir + "/compressed_" + imagePathList[t];
                 }
 
                 outputElement.replace(outputElement.end() - 3, outputElement.end(), "ktx");
                 // for debug
                 // std::cout << "Create! : " << outputElement << std::endl;
 
-                DataProvider dp((inputDir + "/" + imagePathList[i]).c_str(), mipmap, !dxtc, linearize);
+                DataProvider dp((inputDir + "/" + imagePathList[t]).c_str(), mipmap, !dxtc, linearize);
                 auto num = dp.NumberOfParts();
                 errorBlockDataPipeline->setNumTasks(num);
 
@@ -486,18 +487,32 @@ int main( int argc, char** argv )
                         }
                     }
                 }
-                TaskDispatch::Sync();
-                // push block vector 
-                errorBlockDataPipeline->pushHighErrorBlocks();
-                TaskDispatch::Queue([&bdg, &errorBlockDataPipeline]() // start GPU encoding 
+
+                if (once)
+                {
+                    if (!errorBlockDataPipeline->isEmpty())
                     {
                         bdg->ProcessWithGPU(errorBlockDataPipeline);
-                    });
-                TaskDispatch::Sync();
-                auto end = GetTime();
+                    }
+                }
 
+                TaskDispatch::Sync(); // wait CPU
+                errorBlockDataPipeline->pushHighErrorBlocks();
+                priorBd = bd; // for maintain data address
+
+                if (t == imagePathList.size() - 1) // for calculate residual block
+                {
+                    if (!errorBlockDataPipeline->isEmpty())
+                    {
+                        bdg->ProcessWithGPU(errorBlockDataPipeline);
+                    }
+                    priorBd = nullptr;
+                }
+                
+                once = true;
+                auto end = GetTime();
                 float time = (end - start) / 1000.f;
-                std::cout << "output : " << outputElement.c_str() << " compression time = " << time << "ms" << std::endl;
+                std::cout << t << " : output : " << outputElement.c_str() << " compression time = " << time << "ms" << std::endl;
                 timeStamp.push_back(time);
             }
 
@@ -582,16 +597,11 @@ int main( int argc, char** argv )
             TaskDispatch::Sync(); // wait end CPU encoding.
             auto end = GetTime();
             printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
-
             errorBlockDataPipeline->pushHighErrorBlocks();
 
             //-------------------------------------------------------------------------
             start = GetTime();
-            TaskDispatch::Queue([&bdg, &errorBlockDataPipeline]() // start GPU encoding 
-                {
-                    bdg->ProcessWithGPU(errorBlockDataPipeline);
-                });
-            TaskDispatch::Sync();
+            bdg->ProcessWithGPU(errorBlockDataPipeline);
             end = GetTime();
             printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
         }
