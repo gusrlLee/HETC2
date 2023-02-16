@@ -98,8 +98,9 @@ float3 getScaledColor( const float3 rgbInt, const bool bUseColor4 )
 float calcError( float3 a, float3 b )
 {
 	float3 diff = a - b;
-	// return dot( diff, diff );
-	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
+	// diff = float3(diff.x * 0.3f, diff.y * 0.59f, diff.z * 0.11f);
+	return dot( diff, diff );
+	// return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f); // perceptual Error
 }
 
 bool evaluate_solution( const uint subblockStart, const float3 blockRgbInt, const bool bUseColor4,

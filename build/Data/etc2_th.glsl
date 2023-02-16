@@ -191,8 +191,9 @@ uint quant4( float3 rgbValue )
 float calcError( const uint colour0, const uint colour1 )
 {
 	float3 diff = unpackUnorm4x8( colour0 ).xyz - unpackUnorm4x8( colour1 ).xyz;
-	//return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
-	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
+	// diff = float3(diff.x * 0.3f, diff.y * 0.59f, diff.z * 0.11f);
+	return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
+	// return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f); // perceptual Error 
 }
 
 /// Performs:
@@ -362,6 +363,7 @@ void etc2_th_mode_write( const bool hMode, uint c0, uint c1, float distance, uin
 
 	const uint2 dstUV = gl_WorkGroupID.xy;
 	imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
+	// imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
 }
 
 void main()

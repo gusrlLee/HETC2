@@ -191,17 +191,13 @@ namespace betsy
 	{
 		glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-		// Copy "8x8" PFG_RG32_UINT -> 32x32 PFG_ETC1_RGB8_UNORM
-		glCopyImageSubData(m_compressTargetRes, GL_TEXTURE_2D, 0, 0, 0, 0,  //
-			m_dstTexture, GL_TEXTURE_2D, 0, 0, 0, 0,         //
-			(GLsizei)(getBlockWidth()), (GLsizei)(getBlockHeight()), 1);
-
-		StagingTexture stagingTex =
-			createStagingTexture(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, false);
-		downloadStagingTexture(m_compressTargetRes, stagingTex);
+		if (m_downloadStaging.bufferName)
+			destroyStagingTexture(m_downloadStaging);
+		m_downloadStaging = createStagingTexture(getBlockWidth(), getBlockHeight(),
+			hasAlpha() ? PFG_RGBA32_UINT : PFG_RG32_UINT, false);
+		downloadStagingTexture(hasAlpha() ? m_stitchedTarget : m_pModeTargetRes, m_downloadStaging);
 		glFinish();
-
-		return (uint8_t*)stagingTex.data;
+		return reinterpret_cast<uint8_t*>(m_downloadStaging.data);
 	}
 
 	void EncoderETC2::saveToOffset(uint64_t* dst, uint8_t* result)

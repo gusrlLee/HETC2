@@ -89,14 +89,18 @@ float calcError( const uint colour0, const uint colour1 )
 {
 	float3 diff = unpackUnorm4x8( colour0 ).xyz - unpackUnorm4x8( colour1 ).xyz;
 	// return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
-	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
+	// diff = float3(diff.x * 0.3f, diff.y * 0.59f, diff.z * 0.11f);
+	return dot(diff, diff) * 65025.0f;
+	// return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f); // perceptual Error
 }
 
 float calcError( const uint colour0, const float3 colour1 )
 {
 	float3 diff = unpackUnorm4x8( colour0 ).xyz - colour1.xyz;
 	// return dot( diff, diff ) * 65025.0f;  // 65025 = 255 * 255
-	return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f) * 65025.0f;
+	// diff = float3(diff.x * 0.3f, diff.y * 0.59f, diff.z * 0.11f);
+	return dot(diff, diff) * 65025.0f;
+	// return (abs(diff.r)*0.3f + abs(diff.g)*0.59f + abs(diff.b)*0.11f); // perceptual Error
 }
 
 void block_main_colors_find( out uint outC0, out uint outC1, uint c0, uint c1 )

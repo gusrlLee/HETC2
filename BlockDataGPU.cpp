@@ -47,7 +47,6 @@ void BlockDataGPU::initGPU(const char* input)
 
 void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
 {
-
     size_t repeat = 1u;
     ErrorBlock errorBlock = pipeline->getHighErrorBlocks();
 
@@ -65,6 +64,8 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
         m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
         m_Encoder.execute02();
     }
+
+    //saveToOffData(m_Encoder, "errorBlock_no_etc2TH.ktx");
 
     uint8_t* result = m_Encoder.getDownloadData();
     uint32_t offset = 0u;
