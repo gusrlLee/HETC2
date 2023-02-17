@@ -363,7 +363,7 @@ void etc2_th_mode_write( const bool hMode, uint c0, uint c1, float distance, uin
 
 	const uint2 dstUV = gl_WorkGroupID.xy;
 	imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
-	// imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
+	//imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
 }
 
 void main()

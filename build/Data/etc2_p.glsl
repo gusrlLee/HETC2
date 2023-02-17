@@ -205,6 +205,7 @@ void etc2_planar_mode_write( const float3 cO, const float3 cH, const float3 cV )
 	const uint2 dstUV = ( gl_WorkGroupID.xy << 1u ) +
 						uint2( gl_LocalInvocationID.z & 0x01u, gl_LocalInvocationID.z >> 1u );
 	imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
+	// imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
 }
 
 /** Uses a Simple Linear Regression to find the best curve that fits all 4 samples in a row

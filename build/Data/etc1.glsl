@@ -403,6 +403,7 @@ void pack_etc1_block_solid_color( const float3 srcPixel )
 
 	uint2 dstUV = gl_GlobalInvocationID.yz;
 	imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
+	// imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
 
 #ifdef OUTPUT_ERROR
 	imageStore( dstError, int2( dstUV ), float4( bestError, 0.0f, 0.0f, 0.0f ) );
@@ -843,7 +844,7 @@ void main()
 
 		uint2 dstUV = gl_GlobalInvocationID.yz;
 		imageStore( dstTexture, int2( dstUV ), uint4( outputBytes.xy, 0u, 0u ) );
-		//imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
+		// imageStore( dstTexture, int2( dstUV ), uint4( 0u, 0u, 0u, 0u ) );
 		
 #ifdef OUTPUT_ERROR
 		imageStore( dstError, int2( dstUV ),
