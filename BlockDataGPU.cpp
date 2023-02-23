@@ -58,6 +58,7 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
     betsy::CpuImage cpuImage = betsy::CpuImage(errorBlock.srcBuffer.data(), arraySize, w, h, c);
     m_Encoder.initResources(cpuImage, false, false);
 
+    auto start = GetTime();
     while (repeat--)
     {
         m_Encoder.execute00();
@@ -75,5 +76,7 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
         m_Encoder.saveToOffset(dst, result);
         result += 8; // for jump 64bits.
     }
+    auto end = GetTime();
+    printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
 }
 

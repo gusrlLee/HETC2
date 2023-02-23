@@ -285,10 +285,11 @@ int main( int argc, char** argv )
                     else if( etc2 ) type = BlockData::Etc2_RGB;
                     else if( dxtc ) type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
                     else type = BlockData::Etc1;
-                    auto bd = std::make_shared<BlockData>( bmp->Size(), false, type );
+                    auto bd = std::make_shared<BlockData>( bmp->Size(), true, type );
                     auto ptr = bmp->Data();
                     const auto width = bmp->Size().x;
                     const auto localStart = GetTime();
+                    auto start = GetTime();
                     auto linesLeft = bmp->Size().y / 4;
                     size_t offset = 0;
                     if( rgba || type == BlockData::Dxt5 )
@@ -318,8 +319,10 @@ int main( int argc, char** argv )
                         }
                     }
                     taskDispatch.Sync();
+                    auto end = GetTime();
                     const auto localEnd = GetTime();
                     timeData[i] = localEnd - localStart;
+                    printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
                 }
             }
             else
@@ -498,7 +501,7 @@ int main( int argc, char** argv )
 
                 TaskDispatch::Sync(); // wait CPU
                 errorBlockDataPipeline->pushHighErrorBlocks();
-                priorBd = bd; // for maintain data address
+                priorBd = bd; // for maintaining data address
 
                 if (t == imagePathList.size() - 1) // for calculate residual block
                 {
@@ -565,7 +568,9 @@ int main( int argc, char** argv )
                 bda = std::make_shared<BlockData>(alpha, dp.Size(), mipmap, type);
             }
 
-            auto start = GetTime();
+            
+
+            const auto etc_start = GetTime();
             for (int i = 0; i < num; i++)
             {
                 auto part = dp.NextPart();
@@ -593,17 +598,18 @@ int main( int argc, char** argv )
                     }
                 }
             }
+            const auto etc_end = GetTime();
+            printf("etcpak encoding time: %0.3f ms\n", (etc_end - etc_start) / 1000.f);
 
             TaskDispatch::Sync(); // wait end CPU encoding.
-            auto end = GetTime();
-            printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
+
             errorBlockDataPipeline->pushHighErrorBlocks();
 
             //-------------------------------------------------------------------------
             start = GetTime();
             bdg->ProcessWithGPU(errorBlockDataPipeline);
             end = GetTime();
-            printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
+            // printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
         }
     }
     else
@@ -648,7 +654,7 @@ int main( int argc, char** argv )
             bda = std::make_shared<BlockData>( alpha, dp.Size(), mipmap, type );
         }
 
-        auto start = GetTime();
+        const auto etc_start = GetTime();
         for( int i=0; i<num; i++ )
         {
             auto part = dp.NextPart();
@@ -676,8 +682,8 @@ int main( int argc, char** argv )
             }
         }
         TaskDispatch::Sync();
-        auto end = GetTime();
-        printf("etcpak encoding time: %0.3f ms\n", (end - start) / 1000.f);
+        const auto etc_end = GetTime();
+        printf("etcpak encoding time: %0.3f ms\n", (etc_end - etc_start) / 1000.f);
 
         if( stats )
         {
