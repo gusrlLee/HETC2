@@ -279,12 +279,14 @@ int main( int argc, char** argv )
                 {
                     BlockData::Type type;
                     Channels channel;
+                    
                     if( alpha ) channel = Channels::Alpha;
                     else channel = Channels::RGB;
                     if( rgba ) type = BlockData::Etc2_RGBA;
                     else if( etc2 ) type = BlockData::Etc2_RGB;
                     else if( dxtc ) type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
                     else type = BlockData::Etc1;
+
                     auto bd = std::make_shared<BlockData>( bmp->Size(), true, type );
                     auto ptr = bmp->Data();
                     const auto width = bmp->Size().x;
@@ -377,7 +379,7 @@ int main( int argc, char** argv )
             out->Write(output);
         }
     }
-    else if ( useBetsy )
+    else if (useBetsy)
     {
         std::vector<float> timeStamp;
 
@@ -397,9 +399,9 @@ int main( int argc, char** argv )
         //-------------------------------------------------------------------------
 
         // Target directroy
-        if ( isTargetDir ) 
+        if (isTargetDir)
         {
-            bool once = false; 
+            bool once = false;
             if ((handle = _findfirst(output, &fd)) == -1L)
             {
                 std::cout << "Make output directory : " << output << std::endl;
@@ -511,7 +513,7 @@ int main( int argc, char** argv )
                     }
                     priorBd = nullptr;
                 }
-                
+
                 once = true;
                 auto end = GetTime();
                 float time = (end - start) / 1000.f;
@@ -530,79 +532,61 @@ int main( int argc, char** argv )
         } // target file 
         else
         {
-            DataProvider dp(input, mipmap, !dxtc, linearize);
-            auto num = dp.NumberOfParts();
-            errorBlockDataPipeline->setNumTasks( num );
+            auto start = GetTime();
+            auto bmp = std::make_shared<Bitmap>(input, std::numeric_limits<unsigned int>::max(), !dxtc);
+            auto data = bmp->Data();
+            auto end = GetTime();
+            printf("Image load time: %0.3f ms\n", (end - start) / 1000.f);
 
+            const unsigned int parts = ((bmp->Size().y / 4) + 32 - 1) / 32;
             BlockData::Type type;
-            if (etc2)
+            Channels channel;
+
+            // define format 
+            if (alpha) channel = Channels::Alpha;
+            else channel = Channels::RGB;
+
+            if (rgba) type = BlockData::Etc2_RGBA;
+            else if (etc2) type = BlockData::Etc2_RGB;
+            else if (dxtc) type = bmp->Alpha() ? BlockData::Dxt5 : BlockData::Dxt1;
+            else type = BlockData::Etc1;
+
+            auto bd = std::make_shared<BlockData>(output, bmp->Size(), false, type);
+            auto ptr = bmp->Data();
+            const auto width = bmp->Size().x;
+            auto linesLeft = bmp->Size().y / 4;
+            size_t offset = 0;
+
+            const auto localStart = GetTime();
+            if (rgba || type == BlockData::Dxt5)
             {
-                if (rgba && dp.Alpha())
+                for (int j = 0; j < parts; j++)
                 {
-                    type = BlockData::Etc2_RGBA;
-                }
-                else
-                {
-                    type = BlockData::Etc2_RGB;
-                }
-            }
-            else if (dxtc)
-            {
-                if (dp.Alpha())
-                {
-                    type = BlockData::Dxt5;
-                }
-                else
-                {
-                    type = BlockData::Dxt1;
+                    const auto lines = std::min(32, linesLeft);
+                    taskDispatch.Queue([bd, ptr, width, lines, offset, useHeuristics] {
+                        bd->ProcessRGBA(ptr, width * lines / 4, offset, width, useHeuristics);
+                        });
+                    linesLeft -= lines;
+                    ptr += width * lines * 4;
+                    offset += width * lines / 4;
                 }
             }
             else
             {
-                type = BlockData::Etc1;
-            }
-            auto bd = std::make_shared<BlockData>(output, dp.Size(), mipmap, type);
-            BlockDataPtr bda;
-            if (alpha && dp.Alpha() && !rgba)
-            {
-                bda = std::make_shared<BlockData>(alpha, dp.Size(), mipmap, type);
-            }
-
-            
-
-            const auto etc_start = GetTime();
-            for (int i = 0; i < num; i++)
-            {
-                auto part = dp.NextPart();
-
-                if (type == BlockData::Etc2_RGBA || type == BlockData::Dxt5)
+                for (int j = 0; j < parts; j++)
                 {
-                    TaskDispatch::Queue([part, i, &bd, &dither, useHeuristics]()
-                        {
-                            bd->ProcessRGBA(part.src, part.width / 4 * part.lines, part.offset, part.width, useHeuristics);
+                    const auto lines = std::min(32, linesLeft);
+                    taskDispatch.Queue([bd, ptr, width, lines, offset, channel, dither, useHeuristics, &errorBlockDataPipeline] {
+                        bd->Process(ptr, width * lines / 4, errorBlockDataPipeline, offset, width, channel, dither, useHeuristics);
                         });
-                }
-                else
-                {
-                    TaskDispatch::Queue([part, i, &bd, &dither, &errorBlockDataPipeline, useHeuristics]()
-                        {
-                            // our path
-                            bd->Process(part.src, part.width / 4 * part.lines, errorBlockDataPipeline, part.offset, part.width, Channels::RGB, dither, useHeuristics);
-                        });
-                    if (bda)
-                    {
-                        TaskDispatch::Queue([part, i, &bda, useHeuristics]()
-                            {
-                                bda->Process(part.src, part.width / 4 * part.lines, part.offset, part.width, Channels::Alpha, false, useHeuristics);
-                            });
-                    }
+                    linesLeft -= lines;
+                    ptr += width * lines * 4;
+                    offset += width * lines / 4;
                 }
             }
-            const auto etc_end = GetTime();
-            printf("etcpak encoding time: %0.3f ms\n", (etc_end - etc_start) / 1000.f);
-
-            TaskDispatch::Sync(); // wait end CPU encoding.
-
+            taskDispatch.Sync();
+            const auto localEnd = GetTime();
+            printf("etcpak encoding time: %0.3f ms\n", (localEnd - localStart) / 1000.f);
             errorBlockDataPipeline->pushHighErrorBlocks();
 
             //-------------------------------------------------------------------------
@@ -612,6 +596,7 @@ int main( int argc, char** argv )
             // printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
         }
     }
+    
     else
     {
         DataProvider dp( input, mipmap, !dxtc, linearize );
