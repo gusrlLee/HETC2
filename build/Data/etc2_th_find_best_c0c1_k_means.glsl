@@ -11,7 +11,7 @@ uniform sampler2D srcTex;
 
 layout( rg32ui, binding = 0 ) uniform restrict writeonly uimage2DArray dstTexture;
 
-layout( local_size_x = 120,  //
+layout( local_size_x = 4,  // 120 --> 4
 		local_size_y = 4,    //
 		local_size_z = 2 ) in;
 
@@ -53,6 +53,21 @@ const uint2 kLocalInvocationToPixIdx[120] = {
 	uint2( 10u, 11u ), uint2( 10u, 12u ), uint2( 10u, 13u ), uint2( 10u, 14u ), uint2( 10u, 15u ),
 	uint2( 11u, 12u ), uint2( 11u, 13u ), uint2( 11u, 14u ), uint2( 11u, 15u ), uint2( 12u, 13u ),
 	uint2( 12u, 14u ), uint2( 12u, 15u ), uint2( 13u, 14u ), uint2( 13u, 15u ), uint2( 14u, 15u )
+};
+
+// pixel block
+// ---------------------
+// | 00 | 01 | 02 | 03 |
+// ---------------------
+// | 04 | 05 | 06 | 07 | 
+// ---------------------
+// | 08 | 09 | 10 | 11 |
+// ---------------------
+// | 12 | 13 | 14 | 15 | 
+// ---------------------
+
+const uint2 kDiagonalInvocationToPixIdx[4] = {
+	uint2( 0u, 15u), uint2( 5u, 10u ), uint2( 12u, 03u ), uint2( 9u, 6u )
 };
 
 float3 getSrcPixel( uint idx )
@@ -190,8 +205,10 @@ void block_main_colors_find( out uint outC0, out uint outC1, uint c0, uint c1 )
 
 void main()
 {
-	const uint pix0 = kLocalInvocationToPixIdx[gl_LocalInvocationID.x].x;
-	const uint pix1 = kLocalInvocationToPixIdx[gl_LocalInvocationID.x].y;
+	// const uint pix0 = kLocalInvocationToPixIdx[gl_LocalInvocationID.x].x;
+	// const uint pix1 = kLocalInvocationToPixIdx[gl_LocalInvocationID.x].y;
+	const uint pix0 = kDiagonalInvocationToPixIdx[gl_LocalInvocationID.x].x;
+	const uint pix1 = kDiagonalInvocationToPixIdx[gl_LocalInvocationID.x].y;
 
 	uint c0 = quant4( getSrcPixel( pix0 ) * 255.0f );
 	uint c1 = quant4( getSrcPixel( pix1 ) * 255.0f );

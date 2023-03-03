@@ -32,7 +32,7 @@ namespace betsy
 		m_thModesError = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
 			"m_thModesError", TextureFlags::Uav));
 		m_thModesC0C1 = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
-			"m_thModesC0C1", TextureFlags::Uav, 120u));
+			"m_thModesC0C1", TextureFlags::Uav, 4u));
 
 		m_pModeTargetRes = createTexture(TextureParams(
 			getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, "m_pModeTargetRes", TextureFlags::Uav));

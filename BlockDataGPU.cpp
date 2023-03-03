@@ -86,6 +86,6 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
         result += 8; // for jump 64bits.
     }
     end = GetTime();
-    printf("betsy image download time: %0.3f ms\n", (end - start) / 1000.f);
+    printf("betsy image encoding time: %0.3f ms\n", (end - start) / 1000.f);
 }
 

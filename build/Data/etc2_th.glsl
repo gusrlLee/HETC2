@@ -10,7 +10,7 @@
 #define FLT_MAX 340282346638528859811704183484516925440.0f
 
 shared uint g_srcPixelsBlock[16];
-shared float2 g_bestCandidates[120 * 8];  //.x = error; .y = threadId
+shared float2 g_bestCandidates[4 * 8];  //.x = error; .y = threadId // 120 --> 4
 
 uniform sampler2D srcTex;
 
@@ -19,7 +19,7 @@ layout( r32f, binding = 1 ) uniform restrict writeonly image2D dstError;
 layout( rg32ui, binding = 2 ) uniform restrict readonly uimage2DArray c0c1Texture;
 
 layout( local_size_x = 8,    //
-		local_size_y = 120,  // 15 + 14 + 13 + ... + 1
+		local_size_y = 4,  // 15 + 14 + 13 + ... + 1 // 120 --> 4
 		local_size_z = 1 ) in;
 
 const float kDistances[8] = {  //
@@ -438,7 +438,7 @@ void main()
 	// Parallel reduction to find the thread with the best solution
 	// Because 960 != 1024, the last few operations on the last threads will repeat a bit.
 	// However we don't care because the minimum of 2 values will always be the same.
-	const uint iterations = 10u;  // 960 threads = 960 reductions <= 2¹⁰ -> 10 iterations
+	const uint iterations = 5u;  // 960 threads = 960 reductions <= 2¹⁰ -> 10 iterations
 	for( uint i = 0u; i < iterations; ++i )
 	{
 		const uint mask = ( 1u << ( i + 1u ) ) - 1u;
@@ -447,7 +447,7 @@ void main()
 		{
 			// nextThreadId can overflow (off by 1) since we're not power of 2
 			const uint thisThreadId = gl_LocalInvocationIndex;
-			const uint nextThreadId = min( gl_LocalInvocationIndex + idx, 960u - 1u );
+			const uint nextThreadId = min( gl_LocalInvocationIndex + idx, 32u - 1u );
 			const float thisError = g_bestCandidates[thisThreadId].x;
 			const float nextError = g_bestCandidates[nextThreadId].x;
 			if( nextError < thisError )
