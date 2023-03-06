@@ -5,6 +5,8 @@
 
 #include "GL/glcorearb.h"
 
+#include <chrono>
+
 namespace betsy
 {
 	struct CpuImage;
@@ -37,6 +39,10 @@ namespace betsy
 			Use Floyd-steinberg dithering. Anti-banding method.
 		*/
 		void initResources( const CpuImage &srcImage, const bool bCompressAlpha, const bool bDither );
+		// hyeon add.
+		void initResources( const CpuImage& srcInfo, const uint8_t* srcData, // add SrcData pointer
+							const bool bCompressAlpha, const bool bDither );
+
 		void encoderShaderCompile(const bool bCompressAlpha, const bool bDither);
 		void deinitResources();
 

@@ -50,6 +50,9 @@ namespace betsy
 
 		void initResources( const CpuImage &srcImage, const bool bCompressAlpha, const bool bDither,
 							const bool bForEtc2 );
+		// hyeon add.
+		void initResources(const CpuImage& srcInfo, const uint8_t* srcData,  // add SrcData pointer
+			const bool bCompressAlpha, const bool bDither, const bool bForEtc2);
 
 		uint32_t getBlockWidth() const { return ( m_width + 3u ) >> 2u; }
 		uint32_t getBlockHeight() const { return ( m_height + 3u ) >> 2u; }
@@ -68,6 +71,7 @@ namespace betsy
 		*/
 		void initResources( const CpuImage &srcImage, const bool bCompressAlpha, const bool bDither );
 		void encoderShaderCompile( const bool bCompressAlpha, const bool bDither, const bool bForEtc2 );
+		void loadEtc1Table();
 		void deinitResources();
 
 		void execute00();

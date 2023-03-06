@@ -131,12 +131,11 @@ namespace betsy
 		m_dstTexture =
 			createTexture( TextureParams( m_width, m_height, PFG_ETC1_RGB8_UNORM, "m_dstTexture" ) );
 
-		{
-			uint8_t *filledTables = createFilledEtc1Tables();
-			m_etc1TablesSsbo = createUavBuffer( getEtc1TablesSize(), filledTables );
-			delete[] filledTables;
-		}
-
+		//{
+		//	uint8_t *filledTables = createFilledEtc1Tables();
+		//	m_etc1TablesSsbo = createUavBuffer( getEtc1TablesSize(), filledTables );
+		//	delete[] filledTables;
+		//}
 		//m_compressPso =
 		//	createComputePsoFromFile( bForEtc2 ? "etc1_with_error.glsl" : "etc1.glsl", "../Data/" );
 
@@ -155,10 +154,76 @@ namespace betsy
 			//	m_stitchPso = createComputePsoFromFile( "etc2_rgba_stitch.glsl", "../Data/" );
 		}
 
+
 		StagingTexture stagingTex = createStagingTexture( m_width, m_height, srcImage.format, true );
 		memcpy( stagingTex.data, srcImage.data, stagingTex.sizeBytes );
 		uploadStagingTexture( stagingTex, m_srcTexture );
 		destroyStagingTexture( stagingTex );
+
+	}
+	//-------------------------------------------------------------------------
+	void EncoderETC1::initResources(const CpuImage& srcInfo, const uint8_t* srcData,
+									const bool bCompressAlpha, const bool bDither, const bool bForEtc2)
+	{
+		m_width = srcInfo.width;
+		m_height = srcInfo.height;
+
+		const PixelFormat srcFormat =
+			srcInfo.format == PFG_RGBA8_UNORM_SRGB ? PFG_RGBA8_UNORM : srcInfo.format;
+
+		m_srcTexture = createTexture(TextureParams(m_width, m_height, srcFormat, "m_srcTexture"));
+
+		if (bDither)
+		{
+			m_ditheredTexture = createTexture(TextureParams(m_width, m_height, PFG_RGBA8_UNORM,
+				"m_ditheredTexture", TextureFlags::Uav));
+			//m_ditherPso = createComputePsoFromFile( "dither555.glsl", "../Data/" );
+		}
+		else
+		{
+			m_ditheredTexture = m_srcTexture;
+		}
+
+		m_compressTargetRes =
+			createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
+				"m_compressTargetRes", TextureFlags::Uav));
+
+		if (bForEtc2)
+		{
+			m_etc1Error = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
+				"m_etc1Error", TextureFlags::Uav));
+		}
+
+		m_dstTexture =
+			createTexture(TextureParams(m_width, m_height, PFG_ETC1_RGB8_UNORM, "m_dstTexture"));
+
+		//{
+		//	uint8_t* filledTables = createFilledEtc1Tables();
+		//	m_etc1TablesSsbo = createUavBuffer(getEtc1TablesSize(), filledTables);
+		//	delete[] filledTables;
+		//}
+
+		//m_compressPso =
+		//	createComputePsoFromFile( bForEtc2 ? "etc1_with_error.glsl" : "etc1.glsl", "../Data/" );
+
+		if (bCompressAlpha)
+		{
+			m_eacTargetRes =
+				createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
+					"m_eacTargetRes", TextureFlags::Uav));
+			m_stitchedTarget =
+				createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_RGBA32_UINT,
+					"m_stitchedTarget", TextureFlags::Uav));
+			//m_eacPso = createComputePsoFromFile( "eac.glsl", "../Data/" );
+
+			// ETC2 codec does its own stitching
+			//if( !bForEtc2 )
+			//	m_stitchPso = createComputePsoFromFile( "etc2_rgba_stitch.glsl", "../Data/" );
+		}
+		StagingTexture stagingTex = createStagingTexture(m_width, m_height, srcInfo.format, true);
+		memcpy(stagingTex.data, srcData, stagingTex.sizeBytes);
+		uploadStagingTexture(stagingTex, m_srcTexture);
+		destroyStagingTexture(stagingTex);
 	}
 	//-------------------------------------------------------------------------
 	void EncoderETC1::initResources( const CpuImage &srcImage, const bool bCompressAlpha,
@@ -183,6 +248,15 @@ namespace betsy
 			if (!bForEtc2)
 				m_stitchPso = createComputePsoFromFile("etc2_rgba_stitch.glsl", "../Data/");
 		}
+		// load etc1 table
+		loadEtc1Table();
+	}
+	//-------------------------------------------------------------------------
+	void EncoderETC1::loadEtc1Table()
+	{
+		uint8_t* filledTables = createFilledEtc1Tables();
+		m_etc1TablesSsbo = createUavBuffer(getEtc1TablesSize(), filledTables);
+		delete[] filledTables;
 	}
 	//-------------------------------------------------------------------------
 	void EncoderETC1::deinitResources()

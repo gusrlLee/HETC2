@@ -47,7 +47,7 @@ void BlockDataGPU::initGPU(const char* input)
 
 void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
 {
-
+    glFinish();
     auto start = GetTime();
     size_t repeat = 1u;
     ErrorBlock errorBlock = pipeline->getHighErrorBlocks();
@@ -61,8 +61,8 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
     m_Encoder.initResources(cpuImage, false, false);
     glFinish();
     auto end = GetTime();
-    printf("betsy image load time: %0.3f ms\n", (end - start) / 1000.f);
-    
+    printf("Betsy load image time = %0.3f ms \n", (end - start) / 1000.f);
+
     start = GetTime();
     while (repeat--)
     {
@@ -86,6 +86,6 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
         result += 8; // for jump 64bits.
     }
     end = GetTime();
-    printf("betsy image encoding time: %0.3f ms\n", (end - start) / 1000.f);
+    printf("betsy image download time: %0.3f ms\n", (end - start) / 1000.f);
 }
 

@@ -127,6 +127,7 @@ namespace betsy
 		const size_t bytesPerRow = FreeImage_GetPitch( fiBitmap );
 		const uint8_t *srcData = FreeImage_GetBits( fiBitmap );
 
+		// Problem operation.
 		switch( imageType )
 		{
 		case FIT_BITMAP:
@@ -269,6 +270,7 @@ namespace betsy
 		const size_t neededBytes = getSizeBytes(width, height, 1u, 1u, format);
 		data = reinterpret_cast<uint8_t*>(malloc(neededBytes));
 
+		// 중복 처리 제거.
 		// Convert data inverting scanlines
 		const size_t bytesPerRow = FreeImage_GetPitch(fiBitmap);
 		const uint8_t* srcData = FreeImage_GetBits(fiBitmap);

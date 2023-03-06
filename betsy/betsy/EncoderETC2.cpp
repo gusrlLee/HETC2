@@ -25,7 +25,6 @@ namespace betsy
 		const bool bDither)
 	{
 		EncoderETC1::initResources(srcImage, bCompressAlpha, bDither, true);
-
 		m_thModesTargetRes =
 			createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
 				"m_thModesTargetRes", TextureFlags::Uav));
@@ -38,7 +37,7 @@ namespace betsy
 			getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, "m_pModeTargetRes", TextureFlags::Uav));
 		m_pModeError = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
 			"m_pModeError", TextureFlags::Uav));
-
+		
 		// compile shader 
 		//m_thModesPso = createComputePsoFromFile( "etc2_th.glsl", "../Data/" );
 		//m_thModesFindBestC0C1 =
@@ -49,6 +48,24 @@ namespace betsy
 		//	m_stitchPso = createComputePsoFromFile( "etc2_rgba_selector.glsl", "../Data/" );
 		//else
 		//	m_stitchPso = createComputePsoFromFile( "etc2_rgb_selector.glsl", "../Data/" );
+	}
+	//-------------------------------------------------------------------------
+	void EncoderETC2::initResources(const CpuImage& srcInfo, const uint8_t* srcData, 
+		const bool bCompressAlpha, const bool bDither)
+	{
+		EncoderETC1::initResources(srcInfo, srcData, bCompressAlpha, bDither, true); // for ETC2
+		m_thModesTargetRes =
+			createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
+				"m_thModesTargetRes", TextureFlags::Uav));
+		m_thModesError = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
+			"m_thModesError", TextureFlags::Uav));
+		m_thModesC0C1 = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_RG32_UINT,
+			"m_thModesC0C1", TextureFlags::Uav, 4u));
+
+		m_pModeTargetRes = createTexture(TextureParams(
+			getBlockWidth(), getBlockHeight(), PFG_RG32_UINT, "m_pModeTargetRes", TextureFlags::Uav));
+		m_pModeError = createTexture(TextureParams(getBlockWidth(), getBlockHeight(), PFG_R32_FLOAT,
+			"m_pModeError", TextureFlags::Uav));
 	}
 	//-------------------------------------------------------------------------
 	void EncoderETC2::encoderShaderCompile(const bool bCompressAlpha, const bool bDither)
