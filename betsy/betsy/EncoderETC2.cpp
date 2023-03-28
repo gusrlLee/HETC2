@@ -10,6 +10,13 @@
 
 namespace betsy
 {
+	static uint64_t GetTime()
+	{
+		return std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
+	}
+
+
+
 	EncoderETC2::EncoderETC2() :
 		m_thModesTargetRes(0),
 		m_thModesError(0),
@@ -121,8 +128,15 @@ namespace betsy
 	void EncoderETC2::execute01(EncoderETC2::Etc1Quality quality)
 	{
 		// etc1 
+		glFinish();
+		auto start = GetTime();
 		EncoderETC1::execute01(quality);
+		glFinish();
+		auto end = GetTime();
+		printf("[ Betsy GPU ] ETC1 operation time = %0.3f ms \n", (end - start) / 1000.0f);
 
+
+		start = GetTime();
 		// etc2 T-/H-mode 
 		bindTexture(0u, m_ditheredTexture);
 		bindUav(0u, m_thModesTargetRes, PFG_RG32_UINT, ResourceAccess::Write);
@@ -131,13 +145,20 @@ namespace betsy
 		bindComputePso(m_thModesPso);
 		glDispatchCompute(alignToNextMultiple(m_width, 4u) / 4u,
 			alignToNextMultiple(m_height, 4u) / 4u, 1u);
+		glFinish();
+		end = GetTime();
+		printf("[ Betsy GPU ] ETC2 T/H-mode operation time = %0.3f ms \n", (end - start) / 1000.0f);
 
+		start = GetTime();
 		// P-mode
 		bindUav(0u, m_pModeTargetRes, PFG_RG32_UINT, ResourceAccess::Write);
 		bindUav(1u, m_pModeError, PFG_R32_FLOAT, ResourceAccess::Write);
 		bindComputePso(m_pModePso);
 		glDispatchCompute(alignToNextMultiple(m_width, 8u) / 8u,
 			alignToNextMultiple(m_height, 8u) / 8u, 1u);
+		glFinish();
+		end = GetTime();
+		printf("[ Betsy GPU ] ETC2 P-mode operation time = %0.3f ms \n", (end - start) / 1000.0f);
 	}
 	//-------------------------------------------------------------------------
 	void EncoderETC2::execute02()

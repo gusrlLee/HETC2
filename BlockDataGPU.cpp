@@ -66,9 +66,19 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
     start = GetTime();
     while (repeat--)
     {
+        glFinish();
+        
+        start = GetTime();
         m_Encoder.execute00();
+        glFinish();
+        end = GetTime();
+        printf("[ Betsy GPU ] K-means operation time = %0.3f ms \n", (end - start) / 1000.0f);
+
+        start = GetTime();
         m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
+        glFinish();
         m_Encoder.execute02();
+        glFinish();
     }
     glFinish();
     end = GetTime();
