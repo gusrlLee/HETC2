@@ -479,10 +479,10 @@ int main( int argc, char** argv )
                     }
                     else
                     {
-                        TaskDispatch::Queue([part, i, &bd, &dither, &errorBlockDataPipeline, useHeuristics]()
-                            {
-                                bd->Process(part.src, part.width / 4 * part.lines, errorBlockDataPipeline, part.offset, part.width, Channels::RGB, dither, useHeuristics);
-                            });
+                        //TaskDispatch::Queue([part, i, &bd, &dither, &errorBlockDataPipeline, useHeuristics]()
+                        //    {
+                        //        bd->Process(part.src, part.width / 4 * part.lines, errorBlockDataPipeline, part.offset, part.width, Channels::RGB, dither, useHeuristics);
+                        //    });
                         if (bda)
                         {
                             TaskDispatch::Queue([part, i, &bda, useHeuristics]()
@@ -530,6 +530,7 @@ int main( int argc, char** argv )
             std::cout << "1 image compression average time = " << sum / timeStamp.size() << "ms" << std::endl;
             std::cout << "total image = " << timeStamp.size() << " total time = " << sum << "ms" << std::endl;
         } // target file 
+
         else
         {
             auto start = GetTime();
@@ -538,7 +539,8 @@ int main( int argc, char** argv )
             auto end = GetTime();
             printf("Image load time: %0.3f ms\n", (end - start) / 1000.f);
 
-            const unsigned int parts = ((bmp->Size().y / 4) + 32 - 1) / 32;
+            const unsigned int parts = ((bmp->Size().y / 4) + 32 - 1) / 32; // parts = 4
+            
             BlockData::Type type;
             Channels channel;
 
@@ -584,16 +586,14 @@ int main( int argc, char** argv )
                     offset += width * lines / 4;
                 }
             }
-            taskDispatch.Sync();
-            const auto localEnd = GetTime();
-            printf("etcpak encoding time: %0.3f ms\n", (localEnd - localStart) / 1000.f);
-            errorBlockDataPipeline->pushHighErrorBlocks();
 
+            taskDispatch.Sync();
+            errorBlockDataPipeline->pushHighErrorBlocks();
             //-------------------------------------------------------------------------
-            start = GetTime();
+            // betsy GPU encoding.
             bdg->ProcessWithGPU(errorBlockDataPipeline);
-            end = GetTime();
-            // printf("betsy encoding time: %0.3f ms\n", (end - start) / 1000.f);
+            const auto localEnd = GetTime();
+            printf("total encoding time: %0.3f ms\n", (localEnd - localStart) / 1000.f);
         }
     }
     

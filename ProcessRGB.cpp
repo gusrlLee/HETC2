@@ -12,6 +12,25 @@
 #include "ProcessRGB.hpp"
 #include "Tables.hpp"
 #include "Vector.hpp"
+
+
+#include "Timing.hpp"
+#include "ErrorBlockData.h"
+#include "betsy/EncoderBC1.h"
+#include "betsy/EncoderBC4.h"
+#include "betsy/EncoderBC6H.h"
+#include "betsy/EncoderEAC.h"
+#include "betsy/EncoderETC1.h"
+#include "betsy/EncoderETC2.h"
+#include "betsy/CpuImage.h"
+
+namespace betsy
+{
+    extern void initBetsyPlatform();
+    extern void shutdownBetsyPlatform();
+    extern void pollPlatformWindow();
+}  // namespace betsy
+
 #if defined __SSE4_1__ || defined __AVX2__ || defined _MSC_VER
 #  ifdef _MSC_VER
 #    include <intrin.h>
@@ -1050,7 +1069,7 @@ static etcpak_force_inline uint64_t EncodeSelectors_AVX2( uint64_t d, const uint
 
     tidx[0] = _bit_scan_forward(mask0) >> 2;
     tidx[1] = _bit_scan_forward(mask1) >> 2;
-
+    
     if ((terr[0][tidx[0]] + terr[1][tidx[1]]) >= error)
     {
         return value;
@@ -1077,6 +1096,114 @@ static etcpak_force_inline uint64_t EncodeSelectors_AVX2( uint64_t d, const uint
     unsigned int t2 = (t0 | t1) ^ 0xFFFF0000;
 
     return d | static_cast<uint64_t>(_bswap(t2)) << 32;
+}
+
+#ifdef CORRECT_COLOR_ERROR4
+static etcpak_force_inline void RecalculateError(uint64_t& terr, const uint32_t tsel[8], size_t t[2], v4i a[8], const uint32_t* id, const uint8_t* data, bool rotate, const uint8_t* bgrWeight)
+#else
+static etcpak_force_inline void  RecalculateError(uint64_t& terr, const uint32_t tsel[8], size_t t[2], v4i a[8], const uint32_t* id, const uint8_t* data, bool rotate)
+#endif
+{
+    int idx[2][16] = { {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+                       {1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0} };
+
+    for (size_t i = 0; i < 16; i++)
+    {
+        unsigned int bid = id[i];
+
+        uint8_t b = *data++;
+        uint8_t g = *data++;
+        uint8_t r = *data++;
+        data++;
+
+        int dr = a[bid][R] - r;
+        int dg = a[bid][G] - g;
+        int db = a[bid][B] - b;
+
+        int current_idx = (idx[rotate][i]);
+        const int32_t* tab = g_table[t[current_idx]];
+        const uint32_t* sel = &tsel[t[current_idx]];
+        int msb = ((*sel) & 0xFFFF0000) >> 16;
+        int lsb = (*sel) & 0x0000FFFF;
+        int j = ((~(msb >> i) & 0x1) << 1) | ((lsb >> i) & 0x1);
+#ifdef USE_WEIGHTED_LUMA
+        int64_t err = abs(dr + tab[j]) * bgrWeight[R] + abs(dg + tab[j]) * bgrWeight[G] + abs(db + tab[j]) * bgrWeight[B];
+#else
+        int64_t err = abs(dr + tab[j]) * 38 + abs(dg + tab[j]) * 76 + abs(db + tab[j]) * 14;
+#endif
+        terr += err * err;
+    }
+}
+
+// hyeon add 
+static etcpak_force_inline uint64_t EncodeSelectors_AVX2(uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate, const uint64_t value, const uint32_t error, bool &isHighError, v4i a[8], const uint32_t* id, const uint8_t* src) noexcept
+{
+    size_t tidx[2];
+    size_t index_threshold = 8;
+    uint64_t errorThreshold = 20000000;
+    uint64_t blockError = 0u;
+    // Get index of minimum error (terr[0] and terr[1])
+    __m256i err0 = _mm256_load_si256((const __m256i*)terr[0]);
+    __m256i err1 = _mm256_load_si256((const __m256i*)terr[1]);
+
+    __m256i errLo = _mm256_permute2x128_si256(err0, err1, (0) | (2 << 4));
+    __m256i errHi = _mm256_permute2x128_si256(err0, err1, (1) | (3 << 4));
+
+    __m256i errMin0 = _mm256_min_epu32(errLo, errHi);
+
+    __m256i errMin1 = _mm256_shuffle_epi32(errMin0, _MM_SHUFFLE(2, 3, 0, 1));
+    __m256i errMin2 = _mm256_min_epu32(errMin0, errMin1);
+
+    __m256i errMin3 = _mm256_shuffle_epi32(errMin2, _MM_SHUFFLE(1, 0, 3, 2));
+    __m256i errMin4 = _mm256_min_epu32(errMin3, errMin2);
+
+    __m256i errMin5 = _mm256_permute2x128_si256(errMin4, errMin4, (0) | (0 << 4));
+    __m256i errMin6 = _mm256_permute2x128_si256(errMin4, errMin4, (1) | (1 << 4));
+
+    __m256i errMask0 = _mm256_cmpeq_epi32(errMin5, err0);
+    __m256i errMask1 = _mm256_cmpeq_epi32(errMin6, err1);
+
+    uint32_t mask0 = _mm256_movemask_epi8(errMask0);
+    uint32_t mask1 = _mm256_movemask_epi8(errMask1);
+
+    tidx[0] = _bit_scan_forward(mask0) >> 2;
+    tidx[1] = _bit_scan_forward(mask1) >> 2;
+    //std::cout << "ETC1 subblock error = " << (terr[0][tidx[0]] + terr[1][tidx[1]]) << std::endl;
+    
+    RecalculateError(blockError, tsel, tidx, a, id, src, rotate);
+
+    if (blockError >= errorThreshold)
+    {
+        isHighError = true;
+    }
+
+
+    if ((terr[0][tidx[0]] + terr[1][tidx[1]]) >= error)
+    {
+        return value; // return THmode result
+    }
+
+    d |= tidx[0] << 26;
+    d |= tidx[1] << 29;
+
+    unsigned int t0 = tsel[tidx[0]];
+    unsigned int t1 = tsel[tidx[1]];
+
+    if (!rotate)
+    {
+        t0 &= 0xFF00FF00;
+        t1 &= 0x00FF00FF;
+    }
+    else
+    {
+        t0 &= 0xCCCCCCCC;
+        t1 &= 0x33333333;
+    }
+
+    // Flip selectors from sign bit
+    unsigned int t2 = (t0 | t1) ^ 0xFFFF0000;
+
+    return d | static_cast<uint64_t>(_bswap(t2)) << 32; // return ETC1 mode 
 }
 
 #endif
@@ -3179,7 +3306,8 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     alignas(32) uint32_t terr[2][8] = {};
     alignas(32) uint32_t tsel[8];
 
-    uint64_t errorThreshold = 20000000;
+    // uint64_t errorThreshold = 20000000;
+    uint64_t errorThreshold = 4000000;
 
     if ((idx == 0) || (idx == 2))
     {
@@ -3215,7 +3343,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
             plane.plane = result;
             plane.error = error;
         }
-        else
+        else // ETC1
         {
             plane.plane = 0;
             plane.error = MaxError;
@@ -3226,8 +3354,9 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
         // printf("error = %lld\n", plane.error); // for error check
         isHighError = true;
     }
+    auto id = g_id[idx];
 
-    return EncodeSelectors_AVX2(d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error);
+    return EncodeSelectors_AVX2(d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error, isHighError, a, id, src);
 #else
     if (useHeuristics)
     {
@@ -4293,6 +4422,7 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
     int w = 0;
     uint32_t buf[4 * 4];
     uint32_t srcBuffer[4 * 4];
+
     do
     {
 #ifdef __SSE4_1__
@@ -4349,10 +4479,10 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
             std::vector<unsigned char> buffer;
             divRGBData((uint8_t*)srcBuffer, buffer);
             pipeline->pushErrorBlock(dst, buffer);
+
         }
         dst++;
     } while (--blocks);
-    pipeline->endWorker();
 }
 
 void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics )

@@ -141,7 +141,7 @@ float3 rgb676To888( float3 rgbValue )
 float calcError( const float3 colour0, const float3 colour1 )
 {
 	float3 diff = colour0.xyz - colour1.xyz;
-	// diff = float3(diff.x * 0.3f, diff.y * 0.59f, diff.z * 0.11f);
+	diff = float3(diff.x * 0.3f, diff.y * 0.59f, diff.z * 0.11f);
 	return dot( diff, diff );
 	// return (abs(diff.x)*0.3f + abs(diff.y)*0.59f + abs(diff.z)*0.11f); // perceptual Error
 }

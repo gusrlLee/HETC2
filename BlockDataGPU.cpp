@@ -47,10 +47,9 @@ void BlockDataGPU::initGPU(const char* input)
 
 void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
 {
-    glFinish();
-    auto start = GetTime();
     size_t repeat = 1u;
     ErrorBlock errorBlock = pipeline->getHighErrorBlocks();
+    // std::cout << "Error block size = " << errorBlock.dstAddress.size() << std::endl;
 
     int w = 4;
     int h = 4 * errorBlock.dstAddress.size();
@@ -59,34 +58,16 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
 
     betsy::CpuImage cpuImage = betsy::CpuImage(errorBlock.srcBuffer.data(), arraySize, w, h, c);
     m_Encoder.initResources(cpuImage, false, false);
-    glFinish();
-    auto end = GetTime();
-    printf("Betsy load image time = %0.3f ms \n", (end - start) / 1000.f);
 
-    start = GetTime();
+    //start = GetTime();
     while (repeat--)
     {
-        glFinish();
-        
-        start = GetTime();
         m_Encoder.execute00();
-        glFinish();
-        end = GetTime();
-        printf("[ Betsy GPU ] K-means operation time = %0.3f ms \n", (end - start) / 1000.0f);
-
-        start = GetTime();
         m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
-        glFinish();
         m_Encoder.execute02();
-        glFinish();
     }
-    glFinish();
-    end = GetTime();
-    printf("betsy image encoding time: %0.3f ms\n", (end - start) / 1000.f);
+    // saveToOffData(m_Encoder, "errorBlock_no_etc2TH.ktx");
 
-    //saveToOffData(m_Encoder, "errorBlock_no_etc2TH.ktx");
-
-    start = GetTime();
     uint8_t* result = m_Encoder.getDownloadData();
     uint32_t offset = 0u;
     for (int i=errorBlock.dstAddress.size() - 1; i>=0; --i)
@@ -95,7 +76,5 @@ void BlockDataGPU::ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline)
         m_Encoder.saveToOffset(dst, result);
         result += 8; // for jump 64bits.
     }
-    end = GetTime();
-    printf("betsy image download time: %0.3f ms\n", (end - start) / 1000.f);
 }
 
