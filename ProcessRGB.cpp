@@ -1129,7 +1129,10 @@ static etcpak_force_inline void  RecalculateError(uint64_t& terr, const uint32_t
 #ifdef USE_WEIGHTED_LUMA
         int64_t err = abs(dr + tab[j]) * bgrWeight[R] + abs(dg + tab[j]) * bgrWeight[G] + abs(db + tab[j]) * bgrWeight[B];
 #else
-        int64_t err = abs(dr + tab[j]) * 38 + abs(dg + tab[j]) * 76 + abs(db + tab[j]) * 14;
+        // origin
+        // int64_t err = abs(dr + tab[j]) * 38 + abs(dg + tab[j]) * 76 + abs(db + tab[j]) * 14;
+        int64_t err = abs(dr + tab[j]) > abs(dg + tab[j]) ? abs(dr + tab[j]) : abs(dg + tab[j]);
+        err = err > abs(db + tab[j]) ? err : abs(db + tab[j]);
 #endif
         terr += err * err;
     }
