@@ -1131,8 +1131,8 @@ static etcpak_force_inline void  RecalculateError(uint64_t& terr, const uint32_t
 #else
         // origin
         // int64_t err = abs(dr + tab[j]) * 38 + abs(dg + tab[j]) * 76 + abs(db + tab[j]) * 14;
-        int64_t err = abs(dr + tab[j]) > abs(dg + tab[j]) ? abs(dr + tab[j]) : abs(dg + tab[j]);
-        err = err > abs(db + tab[j]) ? err : abs(db + tab[j]);
+        int64_t err = abs(dr + tab[j]) * 38 > abs(dg + tab[j]) * 76 ? abs(dr + tab[j]) * 38 : abs(dg + tab[j]) * 76;
+        err = err > abs(db + tab[j]) * 14 ? err : abs(db + tab[j]) * 14;
 #endif
         terr += err * err;
     }
