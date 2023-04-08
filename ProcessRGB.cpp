@@ -1131,8 +1131,9 @@ static etcpak_force_inline void  RecalculateError(uint64_t& terr, const uint32_t
 #else
         // origin
         // int64_t err = abs(dr + tab[j]) * 38 + abs(dg + tab[j]) * 76 + abs(db + tab[j]) * 14;
-        int64_t err = abs(dr + tab[j]) * 38 > abs(dg + tab[j]) * 76 ? abs(dr + tab[j]) * 38 : abs(dg + tab[j]) * 76;
-        err = err > abs(db + tab[j]) * 14 ? err : abs(db + tab[j]) * 14;
+        int64_t err = abs(dr + tab[j]) > abs(dg + tab[j]) ? abs(dr + tab[j]) : abs(dg + tab[j]);
+        err = err > abs(db + tab[j]) ? err : abs(db + tab[j]);
+        err *= 128;
 #endif
         terr += err * err;
     }
@@ -3309,8 +3310,8 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     alignas(32) uint32_t terr[2][8] = {};
     alignas(32) uint32_t tsel[8];
 
-    // uint64_t errorThreshold = 20000000;
-    uint64_t errorThreshold = 4000000;
+    uint64_t errorThreshold = 20000000;
+    // uint64_t errorThreshold = 4000000;
 
     if ((idx == 0) || (idx == 2))
     {
