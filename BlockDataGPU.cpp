@@ -67,7 +67,7 @@ void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline)
     std::vector<unsigned char> image;
     buffer.resize(limit);
     std::copy(pipe.begin(), pipe.begin() + limit, buffer.begin());
-    std::cout << "Buffer Size = " << buffer.size() << std::endl;
+    //std::cout << "Buffer Size = " << buffer.size() << std::endl;
 
     for (int i = 0; i < buffer.size(); i++)
     {
