@@ -1131,19 +1131,20 @@ static etcpak_force_inline void  RecalculateError(uint64_t& terr, const uint32_t
 #else
         // origin
         // int64_t err = abs(dr + tab[j]) * 38 + abs(dg + tab[j]) * 76 + abs(db + tab[j]) * 14;
-        int64_t err = abs(dr + tab[j]) * 38 > abs(dg + tab[j]) * 76 ? abs(dr + tab[j]) * 38 : abs(dg + tab[j]) * 76;
-        err = err > abs(db + tab[j]) * 14 ? err : abs(db + tab[j]) * 14;
+        int64_t err = abs(dr + tab[j])> abs(dg + tab[j]) ? abs(dr + tab[j]) : abs(dg + tab[j]);
+        err = err > abs(db + tab[j]) ? err : abs(db + tab[j]);
+        err *= 128;
 #endif
         terr += err * err;
     }
 }
 
 // hyeon add 
-static etcpak_force_inline uint64_t EncodeSelectors_AVX2(uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate, const uint64_t value, const uint32_t error, bool &isHighError, v4i a[8], const uint32_t* id, const uint8_t* src) noexcept
+static etcpak_force_inline uint64_t EncodeSelectors_AVX2(uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate, const uint64_t value, const uint32_t error, bool &isHighError, v4i a[8], const uint32_t* id, const uint8_t* src, uint64_t &errorValue) noexcept
 {
     size_t tidx[2];
     size_t index_threshold = 8;
-    uint64_t errorThreshold = 20000000;
+     uint64_t errorThreshold = 10000000;
     uint64_t blockError = 0u;
     // Get index of minimum error (terr[0] and terr[1])
     __m256i err0 = _mm256_load_si256((const __m256i*)terr[0]);
@@ -1178,6 +1179,7 @@ static etcpak_force_inline uint64_t EncodeSelectors_AVX2(uint64_t d, const uint3
     if (blockError >= errorThreshold)
     {
         isHighError = true;
+        errorValue = blockError;
     }
 
 
@@ -3262,7 +3264,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
 }
 
 
-static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool useHeuristics, bool &isHighError)
+static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool useHeuristics, bool &isHighError, uint64_t& errorValue)
 { // add Hyeon
 #ifdef __AVX2__
     uint64_t d = CheckSolid_AVX2(src);
@@ -3309,8 +3311,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     alignas(32) uint32_t terr[2][8] = {};
     alignas(32) uint32_t tsel[8];
 
-    // uint64_t errorThreshold = 20000000;
-    uint64_t errorThreshold = 4000000;
+    uint64_t errorThreshold = 10000000;
 
     if ((idx == 0) || (idx == 2))
     {
@@ -3356,10 +3357,11 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     if (plane.error > errorThreshold && plane.error != MaxError) {
         // printf("error = %lld\n", plane.error); // for error check
         isHighError = true;
+        errorValue = plane.error;
     }
     auto id = g_id[idx];
 
-    return EncodeSelectors_AVX2(d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error, isHighError, a, id, src);
+    return EncodeSelectors_AVX2(d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error, isHighError, a, id, src, errorValue);
 #else
     if (useHeuristics)
     {
@@ -4402,7 +4404,7 @@ void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_
 }
 
 // hyeon add 
-void divRGBData(const uint8_t* src, std::vector<unsigned char> &dst)
+void divRGBData(const uint8_t* src, unsigned char *dst)
 {
     for (size_t i = 0; i < 16; i++)
     {
@@ -4414,9 +4416,13 @@ void divRGBData(const uint8_t* src, std::vector<unsigned char> &dst)
         //dst[i * c] = b;
         //dst[i * c + 1] = g;
         //dst[i * c + 2] = r;
-        dst.push_back(b);
-        dst.push_back(g);
-        dst.push_back(r);
+        //dst.push_back(b);
+        //dst.push_back(g);
+        //dst.push_back(r);
+        dst[3 * i + 0] = b;
+        dst[3 * i + 1] = g;
+        dst[3 * i + 2] = r;
+
     }
 }
 
@@ -4463,10 +4469,11 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
         }
 
         bool isHighError = false;
-        *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError);
+        uint64_t errorValue = 0u;
+        *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError, errorValue);
         if ( isHighError ) 
         {
-            *dst = 0;
+            //*dst = 0;
 
             int idx = 12;
             for (int i = 0; i < 4; i++) {
@@ -4477,12 +4484,10 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
                 idx -= 4;
             }
 
-            BYTE* divRGBBuffer;
-            ErrorBlock errorBlock;
             std::vector<unsigned char> buffer;
-            divRGBData((uint8_t*)srcBuffer, buffer);
-            pipeline->pushErrorBlock(dst, buffer);
-
+            unsigned char pixelBuffer[48];
+            divRGBData((uint8_t*)srcBuffer, pixelBuffer);
+            pipeline->pushPixBlock(dst, errorValue, pixelBuffer);
         }
         dst++;
     } while (--blocks);

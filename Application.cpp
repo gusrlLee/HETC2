@@ -391,7 +391,27 @@ int main( int argc, char** argv )
         // glFinish();
         auto    end = GetTime();
 
+        int max_compute_work_group_count[3];
+        int max_compute_work_group_size[3];
+        int max_compute_work_group_invocations;
+
+        for (int idx = 0; idx < 3; idx++) {
+            glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, idx, &max_compute_work_group_count[idx]);
+            glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, idx, &max_compute_work_group_size[idx]);
+        }
+        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &max_compute_work_group_invocations);
+
+        std::cout << "OpenGL Limitations: " << std::endl;
+        std::cout << "maximum number of work groups in X dimension " << max_compute_work_group_count[0] << std::endl;
+        std::cout << "maximum number of work groups in Y dimension " << max_compute_work_group_count[1] << std::endl;
+        std::cout << "maximum number of work groups in Z dimension " << max_compute_work_group_count[2] << std::endl;
+
+        std::cout << "maximum size of a work group in X dimension " << max_compute_work_group_size[0] << std::endl;
+        std::cout << "maximum size of a work group in Y dimension " << max_compute_work_group_size[1] << std::endl;
+        std::cout << "maximum size of a work group in Z dimension " << max_compute_work_group_size[2] << std::endl;
+
         printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
+
         TaskDispatch taskDispatch(cpus);
         auto errorBlockDataPipeline = std::make_shared<ErrorBlockData>();
         BlockDataPtr priorBd;
@@ -530,8 +550,8 @@ int main( int argc, char** argv )
             std::cout << "1 image compression average time = " << sum / timeStamp.size() << "ms" << std::endl;
             std::cout << "total image = " << timeStamp.size() << " total time = " << sum << "ms" << std::endl;
         } // target file 
-
-        else
+        // target file 
+        else 
         {
             auto start = GetTime();
             auto bmp = std::make_shared<Bitmap>(input, std::numeric_limits<unsigned int>::max(), !dxtc);
@@ -588,7 +608,8 @@ int main( int argc, char** argv )
             }
 
             taskDispatch.Sync();
-            errorBlockDataPipeline->pushHighErrorBlocks();
+
+            //errorBlockDataPipeline->pushHighErrorBlocks();
             //-------------------------------------------------------------------------
             // betsy GPU encoding.
             bdg->ProcessWithGPU(errorBlockDataPipeline);

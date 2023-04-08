@@ -2,7 +2,32 @@
 
 ErrorBlockData::ErrorBlockData()
 {
+	m_Width = 480;
+	m_Hight = 480;
+	m_Channel = 3;
+	m_OffsetX = 0;
+	m_OffsetY = 0;
+}
 
+void ErrorBlockData::pushPixBlock(uint64_t* dst, uint64_t errorValue, unsigned char *arr)
+{
+	PixBlock p;
+	p.address = dst;
+	p.error = errorValue;
+	for (int i = 0; i < 48; i++) // 16 x 3
+	{
+		//p.bgrData.push_back(arr[i]);
+		p.bgrData[i] = arr[i];
+	}
+
+	std::lock_guard<std::mutex> lock(blockMutex);
+	m_pipe.push_back(p);
+}
+
+std::vector<PixBlock> ErrorBlockData::getPipe()
+{
+	std::lock_guard<std::mutex> lock(blockMutex);
+	return m_pipe;
 }
 
 // save error block
@@ -12,11 +37,12 @@ void ErrorBlockData::pushErrorBlock(ErrorBlock errorBlock)
 	m_Pipeline.push(errorBlock);
 }
 
-void ErrorBlockData::pushErrorBlock(uint64_t* dst, std::vector<unsigned char>& arr)
+void ErrorBlockData::pushErrorBlock(uint64_t* dst, uint64_t errorValue, std::vector<unsigned char>& arr)
 {
 	std::lock_guard<std::mutex> lock(blockMutex);
-	m_ErrorBlock.dstAddress.push_back(dst);
-	for (int i = 0; i < 48; i++) // 16 x 4
+	std::pair<uint64_t*, uint64_t> dstAddress = std::make_pair(dst, errorValue);
+	m_ErrorBlock.dstAddress.push_back(dstAddress);
+	for (int i = 0; i < 48; i++) // 16 x 3
 	{
 		m_ErrorBlock.srcBuffer.push_back( arr[i] );
 	}
