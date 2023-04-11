@@ -23,6 +23,8 @@ typedef struct PixBlock {
 
 class ErrorBlockData {
 public:
+	std::vector<PixBlock> m_pipe;
+
 	ErrorBlockData();
 	void pushErrorBlock(ErrorBlock errorBlock);
 	void pushErrorBlock(uint64_t* dst, uint64_t errorValue, std::vector<unsigned char>& arr);
@@ -37,11 +39,12 @@ public:
 	bool isEmpty();
 	void endWorker();
 	void setNumTasks( unsigned int n );
+	void merge(std::vector<PixBlock> &others);
+
 	unsigned int getNumTasks();
+	unsigned int size();
 
 private:
-	std::queue<ErrorBlock> m_Pipeline;
-	std::vector<PixBlock> m_pipe;
 	ErrorBlock m_ErrorBlock;
 	unsigned int m_NumTasks;
 	
@@ -51,6 +54,7 @@ private:
 	unsigned int m_Hight;
 	unsigned int m_Channel;
 
+	std::queue<ErrorBlock> m_Pipeline;
 
 	std::mutex pipelineMutex;
 	std::mutex blockMutex;

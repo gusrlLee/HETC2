@@ -4473,7 +4473,7 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
         *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError, errorValue);
         if ( isHighError ) 
         {
-            //*dst = 0;
+            // *dst = 0;
 
             int idx = 12;
             for (int i = 0; i < 4; i++) {
@@ -4488,6 +4488,81 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBl
             unsigned char pixelBuffer[48];
             divRGBData((uint8_t*)srcBuffer, pixelBuffer);
             pipeline->pushPixBlock(dst, errorValue, pixelBuffer);
+        }
+        dst++;
+    } while (--blocks);
+}
+
+void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, PixBlock *pipeline, int *pipeSize, uint32_t blocks, size_t width, bool useHeuristics)
+{ // add Hyeon
+    int w = 0;
+    uint32_t buf[4 * 4];
+    uint32_t srcBuffer[4 * 4];
+
+    do
+    {
+#ifdef __SSE4_1__
+        __m128 px0 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 0)));
+        __m128 px1 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 1)));
+        __m128 px2 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 2)));
+        __m128 px3 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 3)));
+
+        _MM_TRANSPOSE4_PS(px0, px1, px2, px3);
+
+        _mm_store_si128((__m128i*)(buf + 0), _mm_castps_si128(px0));
+        _mm_store_si128((__m128i*)(buf + 4), _mm_castps_si128(px1));
+        _mm_store_si128((__m128i*)(buf + 8), _mm_castps_si128(px2));
+        _mm_store_si128((__m128i*)(buf + 12), _mm_castps_si128(px3));
+
+        src += 4;
+#else
+        auto ptr = buf;
+        for (int x = 0; x < 4; x++)
+        {
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src += width;
+            *ptr++ = *src;
+            src -= width * 3 - 1;
+        }
+#endif
+        if (++w == width / 4)
+        {
+            src += width * 3;
+            w = 0;
+        }
+
+        bool isHighError = false;
+        uint64_t errorValue = 0u;
+        *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError, errorValue);
+        if (isHighError)
+        {
+            // *dst = 0;
+
+            int idx = 12;
+            for (int i = 0; i < 4; i++) {
+                srcBuffer[idx + 0] = buf[i + 0];
+                srcBuffer[idx + 1] = buf[i + 4];
+                srcBuffer[idx + 2] = buf[i + 8];
+                srcBuffer[idx + 3] = buf[i + 12];
+                idx -= 4;
+            }
+
+            std::vector<unsigned char> buffer;
+            unsigned char pixelBuffer[48];
+            divRGBData((uint8_t*)srcBuffer, pixelBuffer);
+            // pipeline->pushPixBlock(dst, errorValue, pixelBuffer);
+
+            PixBlock pb;
+            pb.address = dst;
+            pb.error = errorValue;
+            std::memcpy(pb.bgrData, pixelBuffer, 48);
+
+            pipeline[(*pipeSize)] = pb;
+            (*pipeSize)+=1;
         }
         dst++;
     } while (--blocks);

@@ -401,15 +401,6 @@ int main( int argc, char** argv )
         }
         glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &max_compute_work_group_invocations);
 
-        std::cout << "OpenGL Limitations: " << std::endl;
-        std::cout << "maximum number of work groups in X dimension " << max_compute_work_group_count[0] << std::endl;
-        std::cout << "maximum number of work groups in Y dimension " << max_compute_work_group_count[1] << std::endl;
-        std::cout << "maximum number of work groups in Z dimension " << max_compute_work_group_count[2] << std::endl;
-
-        std::cout << "maximum size of a work group in X dimension " << max_compute_work_group_size[0] << std::endl;
-        std::cout << "maximum size of a work group in Y dimension " << max_compute_work_group_size[1] << std::endl;
-        std::cout << "maximum size of a work group in Z dimension " << max_compute_work_group_size[2] << std::endl;
-
         printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
 
         TaskDispatch taskDispatch(cpus);
@@ -449,6 +440,7 @@ int main( int argc, char** argv )
                 DataProvider dp((inputDir + "/" + imagePathList[t]).c_str(), mipmap, !dxtc, linearize);
                 auto num = dp.NumberOfParts();
                 errorBlockDataPipeline->setNumTasks(num);
+ 
 
                 BlockData::Type type;
                 if (etc2)
@@ -517,7 +509,7 @@ int main( int argc, char** argv )
                 {
                     if (!errorBlockDataPipeline->isEmpty())
                     {
-                        bdg->ProcessWithGPU(errorBlockDataPipeline);
+                        bdg->ProcessWithGPU(errorBlockDataPipeline, max_compute_work_group_size[1]);
                     }
                 }
 
@@ -529,7 +521,7 @@ int main( int argc, char** argv )
                 {
                     if (!errorBlockDataPipeline->isEmpty())
                     {
-                        bdg->ProcessWithGPU(errorBlockDataPipeline);
+                        bdg->ProcessWithGPU(errorBlockDataPipeline, max_compute_work_group_size[1]);
                     }
                     priorBd = nullptr;
                 }
@@ -551,7 +543,7 @@ int main( int argc, char** argv )
             std::cout << "total image = " << timeStamp.size() << " total time = " << sum << "ms" << std::endl;
         } // target file 
         // target file 
-        else 
+        else
         {
             auto start = GetTime();
             auto bmp = std::make_shared<Bitmap>(input, std::numeric_limits<unsigned int>::max(), !dxtc);
@@ -560,7 +552,7 @@ int main( int argc, char** argv )
             printf("Image load time: %0.3f ms\n", (end - start) / 1000.f);
 
             const unsigned int parts = ((bmp->Size().y / 4) + 32 - 1) / 32; // parts = 4
-            
+
             BlockData::Type type;
             Channels channel;
 
@@ -577,7 +569,25 @@ int main( int argc, char** argv )
             auto ptr = bmp->Data();
             const auto width = bmp->Size().x;
             auto linesLeft = bmp->Size().y / 4;
+            uint64_t BUFFER_MAX_SIZE = width * linesLeft;
             size_t offset = 0;
+
+            std::vector<ErrorBlockDataPtr> errPipes;
+            PixBlock* finalPipe = new PixBlock[width * bmp->Size().y];
+            PixBlock** pixelMat = new PixBlock * [parts];
+            int* sizeArr = new int[parts];
+
+            for (int i = 0; i < parts; i++)
+            {
+                pixelMat[i] = new PixBlock[BUFFER_MAX_SIZE];
+                sizeArr[i] = 0;
+            }
+
+            //for (int i = 0; i < parts; i++)
+            //{
+            //    ErrorBlockDataPtr pipe = std::make_shared<ErrorBlockData>();
+            //    errPipes.push_back(pipe);
+            //}
 
             const auto localStart = GetTime();
             if (rgba || type == BlockData::Dxt5)
@@ -598,23 +608,55 @@ int main( int argc, char** argv )
                 for (int j = 0; j < parts; j++)
                 {
                     const auto lines = std::min(32, linesLeft);
-                    taskDispatch.Queue([bd, ptr, width, lines, offset, channel, dither, useHeuristics, &errorBlockDataPipeline] {
-                        bd->Process(ptr, width * lines / 4, errorBlockDataPipeline, offset, width, channel, dither, useHeuristics);
+                    //ErrorBlockDataPtr pipe = errPipes[j];
+                    auto pPixelMat = pixelMat[j];
+                    auto pSizeArr = &sizeArr[j];
+
+                    taskDispatch.Queue([bd, ptr, width, lines, offset, channel, dither, useHeuristics, pPixelMat, pSizeArr] {
+                        bd->Process(ptr, width * lines / 4, pPixelMat, pSizeArr, offset, width, channel, dither, useHeuristics);
                         });
                     linesLeft -= lines;
                     ptr += width * lines * 4;
                     offset += width * lines / 4;
                 }
             }
-
             taskDispatch.Sync();
 
-            //errorBlockDataPipeline->pushHighErrorBlocks();
-            //-------------------------------------------------------------------------
-            // betsy GPU encoding.
-            bdg->ProcessWithGPU(errorBlockDataPipeline);
+
+
+            ErrorBlockDataPtr pFpipe = std::make_shared<ErrorBlockData>();
+            //for (int i = 1; i < parts; i++)
+            //{
+            //    errPipes[0]->merge(errPipes[i]->m_pipe);
+            //}
+
+            int finalPipeSize = 0;
+            for (int i = 0; i < parts; i++)
+            {
+                std::memcpy(finalPipe + finalPipeSize, pixelMat[i], sizeArr[i] * sizeof(PixBlock));
+                finalPipeSize += sizeArr[i];
+            }
+
+            //for (int i = 0; i < finalPipeSize; i++)
+            //{
+            //    printf("%d : %d\n",i, finalPipe[i].error);
+            //}
+
+            // betsy GPU encoding. // 3ms =========
+            //bdg->ProcessWithGPU(errPipes[0], max_compute_work_group_size[1]); 
+            bdg->ProcessWithGPU(finalPipe, finalPipeSize, max_compute_work_group_size[1]);
             const auto localEnd = GetTime();
             printf("total encoding time: %0.3f ms\n", (localEnd - localStart) / 1000.f);
+
+
+            // delete memory 
+            for (int i = 0; i < parts; i++)
+            {
+                delete[] pixelMat[i];
+            }
+
+            delete[] pixelMat;
+            delete[] sizeArr;
         }
     }
     

@@ -19,6 +19,7 @@ void CompressEtc1RgbDither( const uint32_t* src, uint64_t* dst, uint32_t blocks,
 void CompressEtc2Rgb( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics );
 // add Hyeon
 void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBlockData> pipeline, uint32_t blocks, size_t width, bool useHeuristics);
+void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, PixBlock *pipeline, int *pipeSize, uint32_t blocks, size_t width, bool useHeuristics);
 void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size_t width, bool useHeuristics );
 
 #endif

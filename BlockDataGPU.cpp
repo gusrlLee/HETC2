@@ -51,17 +51,16 @@ void BlockDataGPU::initGPU(const char* input)
     glFinish(); // wait initResource
 }
 
-void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline)
+void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline, uint64_t blockLimit)
 {
     size_t repeat = 1u;
     // ErrorBlock errorBlock = pipeline->getHighErrorBlocks();
-    // std::cout << "Error block size = " << errorBlock.dstAddress.size() << std::endl;
     // get pipeline 
-    std::vector<PixBlock> pipe = pipeline->getPipe();
-    //std::cout << "Pipe size = " << pipe.size() << std::endl;
-    std::sort(pipe.begin(), pipe.end(), cmp);
-    uint64_t limit = 8000;
-    limit = pipe.size() < limit ? pipe.size() : limit;
+    std::vector<PixBlock> pipe = pipeline->getPipe(); // 3ms
+    ////std::cout << "Pipe size = " << pipe.size() << std::endl;
+    std::sort(pipe.begin(), pipe.end(), cmp); // 4ms
+    uint64_t limit = 8 * blockLimit;
+    limit = pipe.size() < limit ? pipe.size() : limit; // 4ms
 
     std::vector<PixBlock> buffer;
     std::vector<unsigned char> image;
@@ -75,39 +74,39 @@ void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline)
         {
             image.push_back(buffer[i].bgrData[t]);
         }
-    }
+    } // 5ms
 
-    //const int width = 4 * buffer.size();
-    //const int height = 4 * buffer.size();
-    //const int width = 800;
-    //const int height = 4 * pipe.size() / width;
-    //const int channel = 3;
-    //const int pitch = channel * width;
-    //const int arraySize = width * height * channel;
-    //unsigned char* data = new unsigned char[arraySize];
-    //int off_x = 0;
-    //int off_y = 0;
-    //for (int t = 0; t < buffer.size(); t++)
-    //{
-    //    for (int j = 0; j < 4; j++)
-    //    {
-    //        for (int i = 0; i < 4; i++)
-    //        {
-    //            int offset = pitch * (off_y + j) + channel * (off_x + i);
-    //            data[offset + 0] = buffer[t].bgrData[channel * (4 * j + i) + 0];
-    //            data[offset + 1] = buffer[t].bgrData[channel * (4 * j + i) + 1];
-    //            data[offset + 2] = buffer[t].bgrData[channel * (4 * j + i) + 2];
-    //        }
-    //    }
-    //    off_x += 4;
-    //    if (off_x > width)
-    //    {
-    //        off_y += 4;
-    //        off_x = 0;
-    //    }
-    //}
-    //betsy::CpuImage cpuImage = betsy::CpuImage(data, arraySize, width, height, channel);
-    //m_Encoder.initResources(cpuImage, false, false);
+    ////const int width = 4 * buffer.size();
+    ////const int height = 4 * buffer.size();
+    ////const int width = 800;
+    ////const int height = 4 * pipe.size() / width;
+    ////const int channel = 3;
+    ////const int pitch = channel * width;
+    ////const int arraySize = width * height * channel;
+    ////unsigned char* data = new unsigned char[arraySize];
+    ////int off_x = 0;
+    ////int off_y = 0;
+    ////for (int t = 0; t < buffer.size(); t++)
+    ////{
+    ////    for (int j = 0; j < 4; j++)
+    ////    {
+    ////        for (int i = 0; i < 4; i++)
+    ////        {
+    ////            int offset = pitch * (off_y + j) + channel * (off_x + i);
+    ////            data[offset + 0] = buffer[t].bgrData[channel * (4 * j + i) + 0];
+    ////            data[offset + 1] = buffer[t].bgrData[channel * (4 * j + i) + 1];
+    ////            data[offset + 2] = buffer[t].bgrData[channel * (4 * j + i) + 2];
+    ////        }
+    ////    }
+    ////    off_x += 4;
+    ////    if (off_x > width)
+    ////    {
+    ////        off_y += 4;
+    ////        off_x = 0;
+    ////    }
+    ////}
+    ////betsy::CpuImage cpuImage = betsy::CpuImage(data, arraySize, width, height, channel);
+    ////m_Encoder.initResources(cpuImage, false, false);
     
     int w = 4;
     int h = 4 * buffer.size();
@@ -115,10 +114,10 @@ void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline)
     int arraySize = w * h * c;
 
     betsy::CpuImage cpuImage = betsy::CpuImage(image.data(), arraySize, w, h, c);
-    m_Encoder.initResources(cpuImage, false, false);
+    m_Encoder.initResources(cpuImage, false, false); // 5ms 
 
     ////start = GetTime();
-    while (repeat--)
+    while (repeat--) // this loop is 13 ms 
     {
         m_Encoder.execute00();
         m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
@@ -137,3 +136,55 @@ void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline)
     }
 }
 
+void BlockDataGPU::ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t blockLimit)
+{
+    size_t repeat = 1u;
+    
+    std::sort(pipeline, pipeline + pipeSize, cmp);
+    uint64_t limit = 8 * blockLimit;
+    limit = pipeSize < limit ? pipeSize : limit; // 4ms
+
+    //std::vector<PixBlock> buffer;
+    std::vector<unsigned char> image;
+    PixBlock* buf = new PixBlock[limit];
+
+    //buffer.resize(limit);
+    //std::copy(pipeline, pipeline + limit, buffer.begin());
+    std::memcpy(buf, pipeline, limit * sizeof(PixBlock));
+
+    for (int i = 0; i < limit; i++)
+    {
+        for (int t = 0; t < 48; t++)
+        {
+            image.push_back(buf[i].bgrData[t]);
+            //std::cout << "image data = " << (int)buf[i].bgrData[t] << std::endl;
+        }
+    }
+
+    int w = 4;
+    int h = 4 * limit;
+    int c = 3;
+    int arraySize = w * h * c;
+
+    betsy::CpuImage cpuImage = betsy::CpuImage(image.data(), arraySize, w, h, c);
+    m_Encoder.initResources(cpuImage, false, false); 
+
+    while (repeat--) // this loop is 13 ms 
+    {
+        m_Encoder.execute00();
+        m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
+        m_Encoder.execute02();
+    }
+    //saveToOffData(m_Encoder, "res.ktx");
+
+    uint8_t* result = m_Encoder.getDownloadData();
+    uint32_t offset = 0u;
+
+    for (int i = limit-1; i >= 0; --i)
+    {
+        auto dst = buf[i].address;
+        m_Encoder.saveToOffset(dst, result);
+        result += 8; // for jump 64bits.
+    }
+    delete[] buf;
+}

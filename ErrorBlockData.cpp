@@ -14,14 +14,19 @@ void ErrorBlockData::pushPixBlock(uint64_t* dst, uint64_t errorValue, unsigned c
 	PixBlock p;
 	p.address = dst;
 	p.error = errorValue;
-	for (int i = 0; i < 48; i++) // 16 x 3
-	{
-		//p.bgrData.push_back(arr[i]);
-		p.bgrData[i] = arr[i];
-	}
-
-	std::lock_guard<std::mutex> lock(blockMutex);
+	//for (int i = 0; i < 48; i++) // 16 x 3
+	//{
+	//	//p.bgrData.push_back(arr[i]);
+	//	p.bgrData[i] = arr[i];
+	//}
+	std::memcpy(p.bgrData, arr, 48);
+	//std::lock_guard<std::mutex> lock(blockMutex);
 	m_pipe.push_back(p);
+}
+
+void ErrorBlockData::merge(std::vector<PixBlock> &others)
+{
+	m_pipe.insert(m_pipe.end(), others.begin(), others.end());
 }
 
 std::vector<PixBlock> ErrorBlockData::getPipe()
@@ -71,6 +76,11 @@ unsigned int ErrorBlockData::getSize()
 {
 	std::lock_guard<std::mutex> lock(pipelineMutex);
 	return m_Pipeline.size();
+}
+
+unsigned int ErrorBlockData::size()
+{
+	return m_pipe.size();
 }
 
 bool ErrorBlockData::isEmpty()
