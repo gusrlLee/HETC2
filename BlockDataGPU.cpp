@@ -10,6 +10,10 @@
 
 #include "Timing.hpp"
 
+#define TEXTURE_WIDTH 8
+#define TEXTURE_HEIGHT 8
+#define TEXTURE_CHANNEL 3
+
 
 static bool cmp(PixBlock a, PixBlock b)
 {
@@ -41,6 +45,12 @@ BlockDataGPU::~BlockDataGPU()
 void BlockDataGPU::setEncodingEnv()
 {
     m_Encoder.encoderShaderCompile(false, false);
+    glFinish();
+}
+
+void BlockDataGPU::setEncodingEnv(bool alpha)
+{
+    m_Encoder.encoderShaderCompile(alpha, false);
     glFinish();
 }
 
@@ -136,7 +146,7 @@ void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline, uint
     }
 }
 
-void BlockDataGPU::ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t blockLimit)
+void BlockDataGPU::ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t blockLimit, bool alpha)
 {
     size_t repeat = 1u;
     
@@ -151,6 +161,8 @@ void BlockDataGPU::ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t blo
     //buffer.resize(limit);
     //std::copy(pipeline, pipeline + limit, buffer.begin());
     std::memcpy(buf, pipeline, limit * sizeof(PixBlock));
+    //std::cout << "get error block size = " << pipeSize << std::endl;
+    //std::cout << "Pipeline size = " << limit << std::endl;
 
     for (int i = 0; i < limit; i++)
     {
@@ -162,12 +174,12 @@ void BlockDataGPU::ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t blo
     }
 
     int w = 4;
-    int h = 4 * limit;
+    int h = 4  * limit;
     int c = 3;
     int arraySize = w * h * c;
 
     betsy::CpuImage cpuImage = betsy::CpuImage(image.data(), arraySize, w, h, c);
-    m_Encoder.initResources(cpuImage, false, false); 
+    m_Encoder.initResources(cpuImage, false, false);
 
     while (repeat--) // this loop is 13 ms 
     {
@@ -175,12 +187,11 @@ void BlockDataGPU::ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t blo
         m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
         m_Encoder.execute02();
     }
-    //saveToOffData(m_Encoder, "res.ktx");
+    // saveToOffData(m_Encoder, "res.ktx");
 
     uint8_t* result = m_Encoder.getDownloadData();
     uint32_t offset = 0u;
-
-    for (int i = limit-1; i >= 0; --i)
+    for (int i = limit - 1; i >= 0; --i)
     {
         auto dst = buf[i].address;
         m_Encoder.saveToOffset(dst, result);

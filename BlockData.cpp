@@ -386,6 +386,24 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
     }
 }
 
+void BlockData::ProcessRGBA(const uint32_t* src, uint32_t blocks, PixBlock* pipeline, int *pipeSize, size_t offset, size_t width, bool useHeuristics)
+{
+    auto dst = ((uint64_t*)(m_data + m_dataOffset)) + offset * 2;
+
+    switch (m_type)
+    {
+    case Etc2_RGBA:
+        CompressEtc2Rgba(src, dst, pipeline, pipeSize, blocks, width, useHeuristics);
+        break;
+    case Dxt5:
+        CompressDxt5(src, dst, blocks, width);
+        break;
+    default:
+        assert(false);
+        break;
+    }
+}
+
 
 namespace
 {

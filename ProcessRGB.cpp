@@ -1144,7 +1144,8 @@ static etcpak_force_inline uint64_t EncodeSelectors_AVX2(uint64_t d, const uint3
 {
     size_t tidx[2];
     size_t index_threshold = 8;
-     uint64_t errorThreshold = 10000000;
+    // uint64_t errorThreshold = 10000000;
+    uint64_t errorThreshold = 4609145;
     uint64_t blockError = 0u;
     // Get index of minimum error (terr[0] and terr[1])
     __m256i err0 = _mm256_load_si256((const __m256i*)terr[0]);
@@ -3267,7 +3268,8 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2( const uint8_t* src, bool us
 static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool useHeuristics, bool &isHighError, uint64_t& errorValue)
 { // add Hyeon
 #ifdef __AVX2__
-    uint64_t d = CheckSolid_AVX2(src);
+    // uint64_t d = CheckSolid_AVX2(src);
+    uint64_t d = 0;
     if (d != 0) return d;
 #else
     uint64_t d = CheckSolid(src);
@@ -3311,7 +3313,8 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     alignas(32) uint32_t terr[2][8] = {};
     alignas(32) uint32_t tsel[8];
 
-    uint64_t errorThreshold = 10000000;
+    // uint64_t errorThreshold = 10000000;
+    uint64_t errorThreshold = 4609145;
 
     if ((idx == 0) || (idx == 2))
     {
@@ -4426,6 +4429,7 @@ void divRGBData(const uint8_t* src, unsigned char *dst)
     }
 }
 
+
 void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, std::shared_ptr<ErrorBlockData> pipeline, uint32_t blocks, size_t width, bool useHeuristics)
 { // add Hyeon
     int w = 0;
@@ -4639,4 +4643,127 @@ void CompressEtc2Rgba( const uint32_t* src, uint64_t* dst, uint32_t blocks, size
         *dst++ = ProcessRGB_ETC2( (uint8_t*)rgba, useHeuristics );
     }
     while( --blocks );
+}
+
+
+void divRGBAData(const uint8_t* src, unsigned char* dst)
+{
+    for (size_t i = 0; i < 16; i++)
+    {
+        uint8_t b = *src++;
+        uint8_t g = *src++;
+        uint8_t r = *src++;
+        src++;
+
+
+        dst[3 * i + 0] = b;
+        dst[3 * i + 1] = g;
+        dst[3 * i + 2] = r;
+
+    }
+}
+
+void CompressEtc2Rgba(const uint32_t* src, uint64_t* dst, PixBlock* pipeline, int *pipeSize, uint32_t blocks, size_t width, bool useHeuristics)
+{
+    int w = 0;
+    uint32_t rgba[4 * 4];
+    uint8_t alpha[4 * 4];
+
+    uint32_t buf[4 * 4];
+    uint32_t srcBuffer[4 * 4];
+    do
+    {
+#ifdef __SSE4_1__
+        __m128 px0 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 0)));
+        __m128 px1 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 1)));
+        __m128 px2 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 2)));
+        __m128 px3 = _mm_castsi128_ps(_mm_loadu_si128((__m128i*)(src + width * 3)));
+
+        _MM_TRANSPOSE4_PS(px0, px1, px2, px3);
+
+        __m128i c0 = _mm_castps_si128(px0);
+        __m128i c1 = _mm_castps_si128(px1);
+        __m128i c2 = _mm_castps_si128(px2);
+        __m128i c3 = _mm_castps_si128(px3);
+
+        _mm_store_si128((__m128i*)(rgba + 0), c0);
+        _mm_store_si128((__m128i*)(rgba + 4), c1);
+        _mm_store_si128((__m128i*)(rgba + 8), c2);
+        _mm_store_si128((__m128i*)(rgba + 12), c3);
+
+        __m128i mask = _mm_setr_epi32(0x0f0b0703, -1, -1, -1);
+
+        __m128i a0 = _mm_shuffle_epi8(c0, mask);
+        __m128i a1 = _mm_shuffle_epi8(c1, _mm_shuffle_epi32(mask, _MM_SHUFFLE(3, 3, 0, 3)));
+        __m128i a2 = _mm_shuffle_epi8(c2, _mm_shuffle_epi32(mask, _MM_SHUFFLE(3, 0, 3, 3)));
+        __m128i a3 = _mm_shuffle_epi8(c3, _mm_shuffle_epi32(mask, _MM_SHUFFLE(0, 3, 3, 3)));
+
+        __m128i s0 = _mm_or_si128(a0, a1);
+        __m128i s1 = _mm_or_si128(a2, a3);
+        __m128i s2 = _mm_or_si128(s0, s1);
+
+        _mm_store_si128((__m128i*)alpha, s2);
+
+        src += 4;
+#else
+        auto ptr = rgba;
+        auto ptr8 = alpha;
+        for (int x = 0; x < 4; x++)
+        {
+            auto v = *src;
+            *ptr++ = v;
+            *ptr8++ = v >> 24;
+            src += width;
+            v = *src;
+            *ptr++ = v;
+            *ptr8++ = v >> 24;
+            src += width;
+            v = *src;
+            *ptr++ = v;
+            *ptr8++ = v >> 24;
+            src += width;
+            v = *src;
+            *ptr++ = v;
+            *ptr8++ = v >> 24;
+            src -= width * 3 - 1;
+        }
+#endif
+        if (++w == width / 4)
+        {
+            src += width * 3;
+            w = 0;
+        }
+
+        bool isHighError = false;
+        uint64_t errorValue = 0u;
+        *dst++ = ProcessAlpha_ETC2(alpha);
+        *dst = ProcessRGB_ETC2((uint8_t*)rgba, useHeuristics, isHighError, errorValue);
+        if (isHighError)
+        {
+            //*dst = 0;
+
+            int idx = 12;
+            for (int i = 0; i < 4; i++) {
+                srcBuffer[idx + 0] = rgba[i + 0];
+                srcBuffer[idx + 1] = rgba[i + 4];
+                srcBuffer[idx + 2] = rgba[i + 8];
+                srcBuffer[idx + 3] = rgba[i + 12];
+                idx -= 4;
+            }
+
+            std::vector<unsigned char> buffer;
+            unsigned char pixelBuffer[48];
+            divRGBAData((uint8_t*)srcBuffer, pixelBuffer);
+            // pipeline->pushPixBlock(dst, errorValue, pixelBuffer);
+
+            PixBlock pb;
+            pb.address = dst;
+            pb.error = errorValue;
+            std::memcpy(pb.bgrData, pixelBuffer, 48);
+
+            pipeline[(*pipeSize)] = pb;
+            (*pipeSize) += 1;
+        }
+        dst++;
+    } while (--blocks);
 }

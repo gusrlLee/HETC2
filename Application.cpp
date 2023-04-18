@@ -386,9 +386,7 @@ int main( int argc, char** argv )
         betsy::initBetsyPlatform();
         auto bdg = std::make_shared<BlockDataGPU>();
         auto start = GetTime();
-        bdg->setEncodingEnv();
-        // bdg->initGPU(input);
-        // glFinish();
+        bdg->setEncodingEnv( false );
         auto    end = GetTime();
 
         int max_compute_work_group_count[3];
@@ -595,8 +593,11 @@ int main( int argc, char** argv )
                 for (int j = 0; j < parts; j++)
                 {
                     const auto lines = std::min(32, linesLeft);
-                    taskDispatch.Queue([bd, ptr, width, lines, offset, useHeuristics] {
-                        bd->ProcessRGBA(ptr, width * lines / 4, offset, width, useHeuristics);
+                    auto pPixelMat = pixelMat[j];
+                    auto pSizeArr = &sizeArr[j];
+
+                    taskDispatch.Queue([bd, ptr, width, lines, offset, useHeuristics, pPixelMat, pSizeArr] {
+                        bd->ProcessRGBA(ptr, width * lines / 4, pPixelMat, pSizeArr, offset, width, useHeuristics);
                         });
                     linesLeft -= lines;
                     ptr += width * lines * 4;
@@ -622,8 +623,6 @@ int main( int argc, char** argv )
             }
             taskDispatch.Sync();
 
-
-
             ErrorBlockDataPtr pFpipe = std::make_shared<ErrorBlockData>();
             //for (int i = 1; i < parts; i++)
             //{
@@ -644,7 +643,7 @@ int main( int argc, char** argv )
 
             // betsy GPU encoding. // 3ms =========
             //bdg->ProcessWithGPU(errPipes[0], max_compute_work_group_size[1]); 
-            bdg->ProcessWithGPU(finalPipe, finalPipeSize, max_compute_work_group_size[1]);
+            bdg->ProcessWithGPU(finalPipe, finalPipeSize, max_compute_work_group_size[1], alpha);
             const auto localEnd = GetTime();
             printf("total encoding time: %0.3f ms\n", (localEnd - localStart) / 1000.f);
 
