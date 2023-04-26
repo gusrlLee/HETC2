@@ -4544,7 +4544,7 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, PixBlock *pipeline, int
         *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError, errorValue);
         if (isHighError)
         {
-            // *dst = 0;
+            *dst = 0;
 
             int idx = 12;
             for (int i = 0; i < 4; i++) {

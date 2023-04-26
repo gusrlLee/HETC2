@@ -146,12 +146,13 @@ void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline, uint
     }
 }
 
-void BlockDataGPU::ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t blockLimit, bool alpha)
+void BlockDataGPU::ProcessWithGPU(PixBlock* pipeline, int pipeSize, uint64_t blockLimit, bool alpha)
 {
     size_t repeat = 1u;
-    
+
     std::sort(pipeline, pipeline + pipeSize, cmp);
-    uint64_t limit = 8 * blockLimit;
+    //uint64_t limit = 8 * blockLimit;
+    uint64_t limit = blockLimit;
     limit = pipeSize < limit ? pipeSize : limit; // 4ms
 
     //std::vector<PixBlock> buffer;
@@ -164,21 +165,67 @@ void BlockDataGPU::ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t blo
     //std::cout << "get error block size = " << pipeSize << std::endl;
     //std::cout << "Pipeline size = " << limit << std::endl;
 
-    for (int i = 0; i < limit; i++)
+    //for (int i = 0; i < limit; i++)
+    //{
+    //    for (int t = 0; t < 48; t++)
+    //    {
+    //        image.push_back(buf[i].bgrData[t]);
+    //        //std::cout << "image data = " << (int)buf[i].bgrData[t] << std::endl;
+    //    }
+    //}
+
+    //int w = 4;
+    //int h = 4 * limit;
+    //int c = 3;
+    //int arraySize = w * h * c;
+
+    //std::cout << "image 1D size = " << pipeSize << std::endl;
+    //std::cout << "Image limit size " << blockLimit << std::endl;
+    //std::cout << "cutting block pipe size = " << limit << std::endl;
+
+    // GPU image implementation.
+    int a = std::sqrt(limit);
+    int gpuImageWidth = (int)a * 4 + 4;
+    int gpuImageHeight = (int)a * 4 + 4;
+
+    int gpuImageChannel = 3;
+    int gpuImagePicth = gpuImageWidth * gpuImageChannel;
+    int gpuImageArraySize = gpuImageChannel * gpuImageWidth * gpuImageHeight;
+
+    unsigned char* GpuImage = new unsigned char[gpuImageArraySize](); // initalization zero
+
+    // make GPU image
+    int idx = 0;
+    unsigned char r = 255;
+    int image_offset_x = 0;
+    int image_offset_y = 0;
+    int width = 0;
+    int x = 0;
+    int y = 0;
+
+    for (int i = 0; i < limit; i++) // buffer size if 4,
     {
-        for (int t = 0; t < 48; t++)
+        for (int y = 0; y < 4; y++)
         {
-            image.push_back(buf[i].bgrData[t]);
-            //std::cout << "image data = " << (int)buf[i].bgrData[t] << std::endl;
+            for (int x = 0; x < 4; x++)
+            {
+                int offset = gpuImagePicth * (image_offset_y + (3 - y)) + gpuImageChannel * (image_offset_x + x);
+                GpuImage[offset + 0] = buf[i].bgrData[gpuImageChannel * (4 * y + x) + 0];
+                GpuImage[offset + 1] = buf[i].bgrData[gpuImageChannel * (4 * y + x) + 1];
+                GpuImage[offset + 2] = buf[i].bgrData[gpuImageChannel * (4 * y + x) + 2];
+            }
+        }
+
+        image_offset_x += 4;
+        if (image_offset_x >= gpuImageWidth)
+        {
+            image_offset_y += 4;
+            image_offset_x = 0;
         }
     }
 
-    int w = 4;
-    int h = 4  * limit;
-    int c = 3;
-    int arraySize = w * h * c;
-
-    betsy::CpuImage cpuImage = betsy::CpuImage(image.data(), arraySize, w, h, c);
+    //betsy::CpuImage cpuImage = betsy::CpuImage(image.data(), arraySize, w, h, c);
+    betsy::CpuImage cpuImage = betsy::CpuImage(GpuImage, gpuImageArraySize, gpuImageWidth, gpuImageHeight, gpuImageChannel);
     m_Encoder.initResources(cpuImage, false, false);
 
     while (repeat--) // this loop is 13 ms 
@@ -187,15 +234,17 @@ void BlockDataGPU::ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t blo
         m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
         m_Encoder.execute02();
     }
+
     // saveToOffData(m_Encoder, "res.ktx");
 
     uint8_t* result = m_Encoder.getDownloadData();
     uint32_t offset = 0u;
-    for (int i = limit - 1; i >= 0; --i)
+    for (int i = 0; i < limit; i++)
     {
         auto dst = buf[i].address;
         m_Encoder.saveToOffset(dst, result);
         result += 8; // for jump 64bits.
     }
     delete[] buf;
+    delete[] GpuImage;
 }

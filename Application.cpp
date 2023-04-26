@@ -643,7 +643,8 @@ int main( int argc, char** argv )
 
             // betsy GPU encoding. // 3ms =========
             //bdg->ProcessWithGPU(errPipes[0], max_compute_work_group_size[1]); 
-            bdg->ProcessWithGPU(finalPipe, finalPipeSize, max_compute_work_group_size[1], alpha);
+            // GPU image max size 1024 x 1024 x 64 in opengl Compute shader work group size 
+            bdg->ProcessWithGPU(finalPipe, finalPipeSize, max_compute_work_group_size[0] * max_compute_work_group_size[1], alpha);
             const auto localEnd = GetTime();
             printf("total encoding time: %0.3f ms\n", (localEnd - localStart) / 1000.f);
 
