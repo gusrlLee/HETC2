@@ -1145,7 +1145,8 @@ static etcpak_force_inline uint64_t EncodeSelectors_AVX2(uint64_t d, const uint3
     size_t tidx[2];
     size_t index_threshold = 8;
     // uint64_t errorThreshold = 10000000;
-    uint64_t errorThreshold = 4609145;
+    //uint64_t errorThreshold = 4609145;
+    uint64_t errorThreshold = 4370000;
     uint64_t blockError = 0u;
     // Get index of minimum error (terr[0] and terr[1])
     __m256i err0 = _mm256_load_si256((const __m256i*)terr[0]);
@@ -3314,7 +3315,8 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     alignas(32) uint32_t tsel[8];
 
     // uint64_t errorThreshold = 10000000;
-    uint64_t errorThreshold = 4609145;
+    // uint64_t errorThreshold = 4609145;
+    uint64_t errorThreshold = 14770000;
 
     if ((idx == 0) || (idx == 2))
     {

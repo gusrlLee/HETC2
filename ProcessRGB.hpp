@@ -2,6 +2,7 @@
 #define __PROCESSRGB_HPP__
 
 #include <stdint.h>
+#include <mutex>
 
 #include "ErrorBlockData.h"
 #include "betsy/EncoderBC1.h"
