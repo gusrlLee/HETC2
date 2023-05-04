@@ -1143,10 +1143,11 @@ static etcpak_force_inline void  RecalculateError(uint64_t& terr, const uint32_t
 static etcpak_force_inline uint64_t EncodeSelectors_AVX2(uint64_t d, const uint32_t terr[2][8], const uint32_t tsel[8], const bool rotate, const uint64_t value, const uint32_t error, bool &isHighError, v4i a[8], const uint32_t* id, const uint8_t* src, uint64_t &errorValue) noexcept
 {
     size_t tidx[2];
-    size_t index_threshold = 8;
     // uint64_t errorThreshold = 10000000;
     //uint64_t errorThreshold = 4609145;
-    uint64_t errorThreshold = 4370000;
+    // uint64_t errorThreshold = 4370000;
+    uint64_t errorThreshold = 2373763; // final threshold 
+
     uint64_t blockError = 0u;
     // Get index of minimum error (terr[0] and terr[1])
     __m256i err0 = _mm256_load_si256((const __m256i*)terr[0]);
@@ -1184,9 +1185,22 @@ static etcpak_force_inline uint64_t EncodeSelectors_AVX2(uint64_t d, const uint3
         errorValue = blockError;
     }
 
+    //if (error != MaxError) // remove P-mode 
+    //{
+    //    if (blockError > error)
+    //    {
+    //        printf("%lu\n", error); // print TH error 
+    //    }
+    //    else 
+    //    {
+    //        printf("%llu\n", blockError); // print ETC1 error 
+    //    }
+    //}
+
 
     if ((terr[0][tidx[0]] + terr[1][tidx[1]]) >= error)
     {
+        // printf("%d\n", error);
         return value; // return THmode result
     }
 
@@ -2252,6 +2266,54 @@ static etcpak_force_inline std::pair<uint64_t, uint64_t> Planar_NEON( const uint
 
 #endif
 
+uint32_t ReCalcErrorTH(uint8_t bestPossibleColors[4][3], uint32_t pixIndices, __m128i r8, __m128i g8, __m128i b8)
+{
+    uint32_t pixColors = 0;
+    uint32_t terr = 0;
+
+    #ifdef __AVX2__
+    alignas(8) uint8_t r[16] = { 0, };
+    alignas(8) uint8_t g[16] = { 0, };
+    alignas(8) uint8_t b[16] = { 0, };
+    _mm_storeu_si128((__m128i*)r, r8);
+    _mm_storeu_si128((__m128i*)g, g8);
+    _mm_storeu_si128((__m128i*)b, b8);
+#endif
+    uint32_t blockErrEachChannel[3] = { 0, };
+    pixColors = pixIndices;
+   
+    for (size_t y = 0; y < 4; ++y)
+    {
+        for (size_t x = 0; x < 4; ++x)
+        {      
+            uint8_t c = (pixColors & 0xc0000000) >> 30;
+            uint32_t err;
+            uint32_t r_err;
+            uint32_t g_err;
+            uint32_t b_err;
+
+           
+#ifdef __AVX2__
+            uint32_t mulFactor = 128;
+#else
+            uint32_t mulFactor = 256;
+#endif
+            r_err = abs(r[x * 4 + y] - bestPossibleColors[c][R]);
+            g_err = abs(g[x * 4 + y] - bestPossibleColors[c][G]);
+            b_err = abs(b[x * 4 + y] - bestPossibleColors[c][B]);
+
+            err = r_err < g_err ? r_err : g_err;
+            err = err < b_err ? err : b_err;
+            err *= mulFactor;
+            terr += err * err;
+           
+            pixColors = pixColors << 2;
+        }
+    }
+
+    return terr;
+}
+
 #ifdef __AVX2__
 uint32_t calculateErrorTH( bool tMode, uint8_t( colorsRGB444 )[2][3], uint8_t& dist, uint32_t& pixIndices, uint8_t startDist, __m128i r8, __m128i g8, __m128i b8 )
 #else
@@ -2265,6 +2327,10 @@ uint32_t calculateErrorTH( bool tMode, uint8_t* src, uint8_t( colorsRGB444 )[2][
     uint8_t colors[2][3];
 
     decompressColor( colorsRGB444, colors );
+
+//#ifdef TH_ERROR_CALCULATION_PER_CHANNEL
+    uint8_t bestPossibleColors[4][3];
+//#endif
 
 #ifdef __AVX2__
     __m128i reverseMask = _mm_set_epi8( 0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15 );
@@ -2392,12 +2458,15 @@ uint32_t calculateErrorTH( bool tMode, uint8_t* src, uint8_t( colorsRGB444 )[2][
             bestBlockErr = blockErr;
             dist = d;
             pixIndices = pixColors;
+            memcpy(bestPossibleColors, possibleColors, 96);
         }
     }
 
-    return bestBlockErr;
-}
+    uint32_t finalError = ReCalcErrorTH(bestPossibleColors, pixIndices, r8, g8, b8);
 
+    // return bestBlockErr;
+    return finalError;
+}
 
 // main T-/H-mode compression function
 #ifdef __AVX2__
@@ -3316,7 +3385,9 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
 
     // uint64_t errorThreshold = 10000000;
     // uint64_t errorThreshold = 4609145;
-    uint64_t errorThreshold = 14770000;
+    // uint64_t errorThreshold = 14770000;
+    //uint64_t errorThreshold = 9842612;
+    uint64_t errorThreshold = 2373763; // final errorthreshold 
 
     if ((idx == 0) || (idx == 2))
     {

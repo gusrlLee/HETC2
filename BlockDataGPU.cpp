@@ -149,8 +149,9 @@ void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline, uint
 void BlockDataGPU::ProcessWithGPU(PixBlock* pipeline, int pipeSize, uint64_t blockLimit, bool alpha)
 {
     size_t repeat = 1u;
+    if ( pipeSize > blockLimit)
+        std::sort(pipeline, pipeline + pipeSize, cmp);
 
-    std::sort(pipeline, pipeline + pipeSize, cmp);
     //uint64_t limit = 8 * blockLimit;
     uint64_t limit = blockLimit;
     limit = pipeSize < limit ? pipeSize : limit; // 4ms
@@ -159,11 +160,12 @@ void BlockDataGPU::ProcessWithGPU(PixBlock* pipeline, int pipeSize, uint64_t blo
     std::vector<unsigned char> image;
     PixBlock* buf = new PixBlock[limit];
 
+    //std::cout << "block pipeline size = " << pipeSize << std::endl;
+    //std::cout << "block pipeline size limit = " << blockLimit << std::endl;
+
     //buffer.resize(limit);
     //std::copy(pipeline, pipeline + limit, buffer.begin());
     std::memcpy(buf, pipeline, limit * sizeof(PixBlock));
-    //std::cout << "get error block size = " << pipeSize << std::endl;
-    //std::cout << "Pipeline size = " << limit << std::endl;
 
     //for (int i = 0; i < limit; i++)
     //{
