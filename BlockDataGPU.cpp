@@ -146,44 +146,25 @@ void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline, uint
     }
 }
 
-void BlockDataGPU::ProcessWithGPU(PixBlock* pipeline, int pipeSize, uint64_t blockLimit, bool alpha)
+void BlockDataGPU::ProcessWithGPU(PixBlock* pipeline, int pipeSize, uint64_t blockLimit, float quality)
 {
     size_t repeat = 1u;
-    if ( pipeSize > blockLimit)
-        std::sort(pipeline, pipeline + pipeSize, cmp);
+    //std::cout << "Pipeline size = " << pipeSize << std::endl;
+    uint64_t limit = pipeSize * quality;
+    //std::cout << "Limit = " << limit << std::endl;
+    // limit = (16 * pipeSize) < limit ? pipeSize : limit; // 4ms\
 
-    //uint64_t limit = 8 * blockLimit;
-    uint64_t limit = blockLimit;
-    limit = pipeSize < limit ? pipeSize : limit; // 4ms
-
-    //std::vector<PixBlock> buffer;
-    std::vector<unsigned char> image;
     PixBlock* buf = new PixBlock[limit];
-
-    //std::cout << "block pipeline size = " << pipeSize << std::endl;
-    //std::cout << "block pipeline size limit = " << blockLimit << std::endl;
-
-    //buffer.resize(limit);
-    //std::copy(pipeline, pipeline + limit, buffer.begin());
-    std::memcpy(buf, pipeline, limit * sizeof(PixBlock));
-
-    //for (int i = 0; i < limit; i++)
-    //{
-    //    for (int t = 0; t < 48; t++)
-    //    {
-    //        image.push_back(buf[i].bgrData[t]);
-    //        //std::cout << "image data = " << (int)buf[i].bgrData[t] << std::endl;
-    //    }
-    //}
-
-    //int w = 4;
-    //int h = 4 * limit;
-    //int c = 3;
-    //int arraySize = w * h * c;
-
-    //std::cout << "image 1D size = " << pipeSize << std::endl;
-    //std::cout << "Image limit size " << blockLimit << std::endl;
-    //std::cout << "cutting block pipe size = " << limit << std::endl;
+    if (quality < 1.0) // Not Bset mode
+    {
+        std::sort(pipeline, pipeline + pipeSize, cmp); // sorting about error
+        std::memcpy(buf, pipeline, limit * sizeof(PixBlock));
+    }
+    else // Best mode 
+    {
+        // not sorting, only store process 
+        std::memcpy(buf, pipeline, limit * sizeof(PixBlock));
+    }
 
     // GPU image implementation.
     int a = std::sqrt(limit);
@@ -226,7 +207,6 @@ void BlockDataGPU::ProcessWithGPU(PixBlock* pipeline, int pipeSize, uint64_t blo
         }
     }
 
-    //betsy::CpuImage cpuImage = betsy::CpuImage(image.data(), arraySize, w, h, c);
     betsy::CpuImage cpuImage = betsy::CpuImage(GpuImage, gpuImageArraySize, gpuImageWidth, gpuImageHeight, gpuImageChannel);
     m_Encoder.initResources(cpuImage, false, false);
 
@@ -237,7 +217,7 @@ void BlockDataGPU::ProcessWithGPU(PixBlock* pipeline, int pipeSize, uint64_t blo
         m_Encoder.execute02();
     }
 
-    // saveToOffData(m_Encoder, "res.ktx");
+    //saveToOffData(m_Encoder, "res.ktx");
 
     uint8_t* result = m_Encoder.getDownloadData();
     uint32_t offset = 0u;

@@ -52,7 +52,7 @@ public:
 	void setEncodingEnv();
 	void setEncodingEnv(bool alpha);
 	void ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline, uint64_t limit);
-	void ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t limit, bool alpha);
+	void ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t limit, float quality);
 
 private:
 	size_t m_Repeat;

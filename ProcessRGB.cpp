@@ -63,6 +63,10 @@ const unsigned int R = 2;
 const unsigned int G = 1;
 const unsigned int B = 0;
 
+//static uint64_t errorThreshold = 2373763;
+//static uint64_t errorThreshold = 1978136; // PSNR = 39.35 dB
+static uint64_t errorThreshold = 4609144; // PSNR = 35.68 dB 
+
 struct Luma
 {
 #ifdef __AVX2__
@@ -810,184 +814,184 @@ static etcpak_force_inline __m128i r6g7b6_AVX2(__m128 cof, __m128 chf, __m128 cv
     __m128i cohv5 = _mm_packus_epi16(_mm256_castsi256_si128(cohv4), _mm256_extracti128_si256(cohv4, 1));
     return _mm_shuffle_epi8(cohv5, _mm_setr_epi8(6, 5, 4, -1, 2, 1, 0, -1, 10, 9, 8, -1, -1, -1, -1, -1));
 }
-
-static etcpak_force_inline Plane Planar_AVX2( const Channels& ch, uint8_t& mode, bool useHeuristics )
+// origin
+static etcpak_force_inline Plane Planar_AVX2(const Channels& ch, uint8_t& mode, bool useHeuristics)
 {
-    __m128i t0 = _mm_sad_epu8( ch.r8, _mm_setzero_si128() );
-    __m128i t1 = _mm_sad_epu8( ch.g8, _mm_setzero_si128() );
-    __m128i t2 = _mm_sad_epu8( ch.b8, _mm_setzero_si128() );
+    __m128i t0 = _mm_sad_epu8(ch.r8, _mm_setzero_si128());
+    __m128i t1 = _mm_sad_epu8(ch.g8, _mm_setzero_si128());
+    __m128i t2 = _mm_sad_epu8(ch.b8, _mm_setzero_si128());
 
-    __m128i r8s = _mm_shuffle_epi8( ch.r8, _mm_set_epi8( 0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0 ) );
-    __m128i g8s = _mm_shuffle_epi8( ch.g8, _mm_set_epi8( 0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0 ) );
-    __m128i b8s = _mm_shuffle_epi8( ch.b8, _mm_set_epi8( 0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0 ) );
+    __m128i r8s = _mm_shuffle_epi8(ch.r8, _mm_set_epi8(0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0));
+    __m128i g8s = _mm_shuffle_epi8(ch.g8, _mm_set_epi8(0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0));
+    __m128i b8s = _mm_shuffle_epi8(ch.b8, _mm_set_epi8(0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0));
 
-    __m128i s0 = _mm_sad_epu8( r8s, _mm_setzero_si128() );
-    __m128i s1 = _mm_sad_epu8( g8s, _mm_setzero_si128() );
-    __m128i s2 = _mm_sad_epu8( b8s, _mm_setzero_si128() );
+    __m128i s0 = _mm_sad_epu8(r8s, _mm_setzero_si128());
+    __m128i s1 = _mm_sad_epu8(g8s, _mm_setzero_si128());
+    __m128i s2 = _mm_sad_epu8(b8s, _mm_setzero_si128());
 
-    __m256i sr0 = _mm256_insertf128_si256( _mm256_castsi128_si256( t0 ), s0, 1 );
-    __m256i sg0 = _mm256_insertf128_si256( _mm256_castsi128_si256( t1 ), s1, 1 );
-    __m256i sb0 = _mm256_insertf128_si256( _mm256_castsi128_si256( t2 ), s2, 1 );
+    __m256i sr0 = _mm256_insertf128_si256(_mm256_castsi128_si256(t0), s0, 1);
+    __m256i sg0 = _mm256_insertf128_si256(_mm256_castsi128_si256(t1), s1, 1);
+    __m256i sb0 = _mm256_insertf128_si256(_mm256_castsi128_si256(t2), s2, 1);
 
-    __m256i sr1 = _mm256_slli_epi64( sr0, 32 );
-    __m256i sg1 = _mm256_slli_epi64( sg0, 16 );
+    __m256i sr1 = _mm256_slli_epi64(sr0, 32);
+    __m256i sg1 = _mm256_slli_epi64(sg0, 16);
 
-    __m256i srb = _mm256_or_si256( sr1, sb0 );
-    __m256i srgb = _mm256_or_si256( srb, sg1 );
+    __m256i srb = _mm256_or_si256(sr1, sb0);
+    __m256i srgb = _mm256_or_si256(srb, sg1);
 
-    if( mode != ModePlanar && useHeuristics )
+    if (mode != ModePlanar && useHeuristics)
     {
         Plane plane;
-        plane.sum4 = _mm256_permute4x64_epi64( srgb, _MM_SHUFFLE( 2, 3, 0, 1 ) );
+        plane.sum4 = _mm256_permute4x64_epi64(srgb, _MM_SHUFFLE(2, 3, 0, 1));
         return plane;
     }
 
-    __m128i t3 = _mm_castps_si128( _mm_shuffle_ps( _mm_castsi128_ps( t0 ), _mm_castsi128_ps( t1 ), _MM_SHUFFLE( 2, 0, 2, 0 ) ) );
-    __m128i t4 = _mm_shuffle_epi32( t2, _MM_SHUFFLE( 3, 1, 2, 0 ) );
-    __m128i t5 = _mm_hadd_epi32( t3, t4 );
-    __m128i t6 = _mm_shuffle_epi32( t5, _MM_SHUFFLE( 1, 1, 1, 1 ) );
-    __m128i t7 = _mm_shuffle_epi32( t5, _MM_SHUFFLE( 2, 2, 2, 2 ) );
+    __m128i t3 = _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(t0), _mm_castsi128_ps(t1), _MM_SHUFFLE(2, 0, 2, 0)));
+    __m128i t4 = _mm_shuffle_epi32(t2, _MM_SHUFFLE(3, 1, 2, 0));
+    __m128i t5 = _mm_hadd_epi32(t3, t4);
+    __m128i t6 = _mm_shuffle_epi32(t5, _MM_SHUFFLE(1, 1, 1, 1));
+    __m128i t7 = _mm_shuffle_epi32(t5, _MM_SHUFFLE(2, 2, 2, 2));
 
-    __m256i sr = _mm256_broadcastw_epi16( t5 );
-    __m256i sg = _mm256_broadcastw_epi16( t6 );
-    __m256i sb = _mm256_broadcastw_epi16( t7 );
+    __m256i sr = _mm256_broadcastw_epi16(t5);
+    __m256i sg = _mm256_broadcastw_epi16(t6);
+    __m256i sb = _mm256_broadcastw_epi16(t7);
 
-    __m256i r08 = _mm256_cvtepu8_epi16( ch.r8 );
-    __m256i g08 = _mm256_cvtepu8_epi16( ch.g8 );
-    __m256i b08 = _mm256_cvtepu8_epi16( ch.b8 );
+    __m256i r08 = _mm256_cvtepu8_epi16(ch.r8);
+    __m256i g08 = _mm256_cvtepu8_epi16(ch.g8);
+    __m256i b08 = _mm256_cvtepu8_epi16(ch.b8);
 
-    __m256i r16 = _mm256_slli_epi16( r08, 4 );
-    __m256i g16 = _mm256_slli_epi16( g08, 4 );
-    __m256i b16 = _mm256_slli_epi16( b08, 4 );
+    __m256i r16 = _mm256_slli_epi16(r08, 4);
+    __m256i g16 = _mm256_slli_epi16(g08, 4);
+    __m256i b16 = _mm256_slli_epi16(b08, 4);
 
-    __m256i difR0 = _mm256_sub_epi16( r16, sr );
-    __m256i difG0 = _mm256_sub_epi16( g16, sg );
-    __m256i difB0 = _mm256_sub_epi16( b16, sb );
+    __m256i difR0 = _mm256_sub_epi16(r16, sr);
+    __m256i difG0 = _mm256_sub_epi16(g16, sg);
+    __m256i difB0 = _mm256_sub_epi16(b16, sb);
 
-    __m256i difRyz = _mm256_madd_epi16( difR0, _mm256_set_epi16( 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255 ) );
-    __m256i difGyz = _mm256_madd_epi16( difG0, _mm256_set_epi16( 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255 ) );
-    __m256i difByz = _mm256_madd_epi16( difB0, _mm256_set_epi16( 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255 ) );
+    __m256i difRyz = _mm256_madd_epi16(difR0, _mm256_set_epi16(255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255));
+    __m256i difGyz = _mm256_madd_epi16(difG0, _mm256_set_epi16(255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255));
+    __m256i difByz = _mm256_madd_epi16(difB0, _mm256_set_epi16(255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255));
 
-    __m256i difRxz = _mm256_madd_epi16( difR0, _mm256_set_epi16( 255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255 ) );
-    __m256i difGxz = _mm256_madd_epi16( difG0, _mm256_set_epi16( 255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255 ) );
-    __m256i difBxz = _mm256_madd_epi16( difB0, _mm256_set_epi16( 255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255 ) );
+    __m256i difRxz = _mm256_madd_epi16(difR0, _mm256_set_epi16(255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255));
+    __m256i difGxz = _mm256_madd_epi16(difG0, _mm256_set_epi16(255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255));
+    __m256i difBxz = _mm256_madd_epi16(difB0, _mm256_set_epi16(255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255));
 
-    __m256i difRGyz = _mm256_hadd_epi32( difRyz, difGyz );
-    __m256i difByzxz = _mm256_hadd_epi32( difByz, difBxz );
+    __m256i difRGyz = _mm256_hadd_epi32(difRyz, difGyz);
+    __m256i difByzxz = _mm256_hadd_epi32(difByz, difBxz);
 
-    __m256i difRGxz = _mm256_hadd_epi32( difRxz, difGxz );
+    __m256i difRGxz = _mm256_hadd_epi32(difRxz, difGxz);
 
-    __m128i sumRGyz = _mm_add_epi32( _mm256_castsi256_si128( difRGyz ), _mm256_extracti128_si256( difRGyz, 1 ) );
-    __m128i sumByzxz = _mm_add_epi32( _mm256_castsi256_si128( difByzxz ), _mm256_extracti128_si256( difByzxz, 1 ) );
-    __m128i sumRGxz = _mm_add_epi32( _mm256_castsi256_si128( difRGxz ), _mm256_extracti128_si256( difRGxz, 1 ) );
+    __m128i sumRGyz = _mm_add_epi32(_mm256_castsi256_si128(difRGyz), _mm256_extracti128_si256(difRGyz, 1));
+    __m128i sumByzxz = _mm_add_epi32(_mm256_castsi256_si128(difByzxz), _mm256_extracti128_si256(difByzxz, 1));
+    __m128i sumRGxz = _mm_add_epi32(_mm256_castsi256_si128(difRGxz), _mm256_extracti128_si256(difRGxz, 1));
 
-    __m128i sumRGByz = _mm_hadd_epi32( sumRGyz, sumByzxz );
-    __m128i sumRGByzxz = _mm_hadd_epi32( sumRGxz, sumByzxz );
+    __m128i sumRGByz = _mm_hadd_epi32(sumRGyz, sumByzxz);
+    __m128i sumRGByzxz = _mm_hadd_epi32(sumRGxz, sumByzxz);
 
-    __m128i sumRGBxz = _mm_shuffle_epi32( sumRGByzxz, _MM_SHUFFLE( 2, 3, 1, 0 ) );
+    __m128i sumRGBxz = _mm_shuffle_epi32(sumRGByzxz, _MM_SHUFFLE(2, 3, 1, 0));
 
-    __m128 sumRGByzf = _mm_cvtepi32_ps( sumRGByz );
-    __m128 sumRGBxzf = _mm_cvtepi32_ps( sumRGBxz );
+    __m128 sumRGByzf = _mm_cvtepi32_ps(sumRGByz);
+    __m128 sumRGBxzf = _mm_cvtepi32_ps(sumRGBxz);
 
-    const float value = ( 255 * 255 * 8.0f + 85 * 85 * 8.0f ) * 16.0f;
+    const float value = (255 * 255 * 8.0f + 85 * 85 * 8.0f) * 16.0f;
 
-    __m128 scale = _mm_set1_ps( -4.0f / value );
+    __m128 scale = _mm_set1_ps(-4.0f / value);
 
-    __m128 af = _mm_mul_ps( sumRGBxzf, scale );
-    __m128 bf = _mm_mul_ps( sumRGByzf, scale );
+    __m128 af = _mm_mul_ps(sumRGBxzf, scale);
+    __m128 bf = _mm_mul_ps(sumRGByzf, scale);
 
-    __m128 df = _mm_mul_ps( _mm_cvtepi32_ps( t5 ), _mm_set1_ps( 4.0f / 16.0f ) );
+    __m128 df = _mm_mul_ps(_mm_cvtepi32_ps(t5), _mm_set1_ps(4.0f / 16.0f));
 
     // calculating the three colors RGBO, RGBH, and RGBV.  RGB = df - af * x - bf * y;
-    __m128 cof0 = _mm_fnmadd_ps( af, _mm_set1_ps( -255.0f ), _mm_fnmadd_ps( bf, _mm_set1_ps( -255.0f ), df ) );
-    __m128 chf0 = _mm_fnmadd_ps( af, _mm_set1_ps( 425.0f ), _mm_fnmadd_ps( bf, _mm_set1_ps( -255.0f ), df ) );
-    __m128 cvf0 = _mm_fnmadd_ps( af, _mm_set1_ps( -255.0f ), _mm_fnmadd_ps( bf, _mm_set1_ps( 425.0f ), df ) );
+    __m128 cof0 = _mm_fnmadd_ps(af, _mm_set1_ps(-255.0f), _mm_fnmadd_ps(bf, _mm_set1_ps(-255.0f), df));
+    __m128 chf0 = _mm_fnmadd_ps(af, _mm_set1_ps(425.0f), _mm_fnmadd_ps(bf, _mm_set1_ps(-255.0f), df));
+    __m128 cvf0 = _mm_fnmadd_ps(af, _mm_set1_ps(-255.0f), _mm_fnmadd_ps(bf, _mm_set1_ps(425.0f), df));
 
     // convert to r6g7b6
-    __m128i cohv = r6g7b6_AVX2( cof0, chf0, cvf0 );
+    __m128i cohv = r6g7b6_AVX2(cof0, chf0, cvf0);
 
-    uint64_t rgbho = _mm_extract_epi64( cohv, 0 );
-    uint32_t rgbv0 = _mm_extract_epi32( cohv, 2 );
+    uint64_t rgbho = _mm_extract_epi64(cohv, 0);
+    uint32_t rgbv0 = _mm_extract_epi32(cohv, 2);
 
     // Error calculation
     uint64_t error = 0;
     if( !useHeuristics )
     {
-        auto ro0 = ( rgbho >> 48 ) & 0x3F;
-        auto go0 = ( rgbho >> 40 ) & 0x7F;
-        auto bo0 = ( rgbho >> 32 ) & 0x3F;
-        auto ro1 = ( ro0 >> 4 ) | ( ro0 << 2 );
-        auto go1 = ( go0 >> 6 ) | ( go0 << 1 );
-        auto bo1 = ( bo0 >> 4 ) | ( bo0 << 2 );
-        auto ro2 = ( ro1 << 2 ) + 2;
-        auto go2 = ( go1 << 2 ) + 2;
-        auto bo2 = ( bo1 << 2 ) + 2;
+        auto ro0 = (rgbho >> 48) & 0x3F;
+        auto go0 = (rgbho >> 40) & 0x7F;
+        auto bo0 = (rgbho >> 32) & 0x3F;
+        auto ro1 = (ro0 >> 4) | (ro0 << 2);
+        auto go1 = (go0 >> 6) | (go0 << 1);
+        auto bo1 = (bo0 >> 4) | (bo0 << 2);
+        auto ro2 = (ro1 << 2) + 2;
+        auto go2 = (go1 << 2) + 2;
+        auto bo2 = (bo1 << 2) + 2;
 
-        __m256i ro3 = _mm256_set1_epi16( ro2 );
-        __m256i go3 = _mm256_set1_epi16( go2 );
-        __m256i bo3 = _mm256_set1_epi16( bo2 );
+        __m256i ro3 = _mm256_set1_epi16(ro2);
+        __m256i go3 = _mm256_set1_epi16(go2);
+        __m256i bo3 = _mm256_set1_epi16(bo2);
 
-        auto rh0 = ( rgbho >> 16 ) & 0x3F;
-        auto gh0 = ( rgbho >> 8 ) & 0x7F;
-        auto bh0 = ( rgbho >> 0 ) & 0x3F;
-        auto rh1 = ( rh0 >> 4 ) | ( rh0 << 2 );
-        auto gh1 = ( gh0 >> 6 ) | ( gh0 << 1 );
-        auto bh1 = ( bh0 >> 4 ) | ( bh0 << 2 );
+        auto rh0 = (rgbho >> 16) & 0x3F;
+        auto gh0 = (rgbho >> 8) & 0x7F;
+        auto bh0 = (rgbho >> 0) & 0x3F;
+        auto rh1 = (rh0 >> 4) | (rh0 << 2);
+        auto gh1 = (gh0 >> 6) | (gh0 << 1);
+        auto bh1 = (bh0 >> 4) | (bh0 << 2);
 
         auto rh2 = rh1 - ro1;
         auto gh2 = gh1 - go1;
         auto bh2 = bh1 - bo1;
 
-        __m256i rh3 = _mm256_set1_epi16( rh2 );
-        __m256i gh3 = _mm256_set1_epi16( gh2 );
-        __m256i bh3 = _mm256_set1_epi16( bh2 );
+        __m256i rh3 = _mm256_set1_epi16(rh2);
+        __m256i gh3 = _mm256_set1_epi16(gh2);
+        __m256i bh3 = _mm256_set1_epi16(bh2);
 
-        auto rv0 = ( rgbv0 >> 16 ) & 0x3F;
-        auto gv0 = ( rgbv0 >> 8 ) & 0x7F;
-        auto bv0 = ( rgbv0 >> 0 ) & 0x3F;
-        auto rv1 = ( rv0 >> 4 ) | ( rv0 << 2 );
-        auto gv1 = ( gv0 >> 6 ) | ( gv0 << 1 );
-        auto bv1 = ( bv0 >> 4 ) | ( bv0 << 2 );
+        auto rv0 = (rgbv0 >> 16) & 0x3F;
+        auto gv0 = (rgbv0 >> 8) & 0x7F;
+        auto bv0 = (rgbv0 >> 0) & 0x3F;
+        auto rv1 = (rv0 >> 4) | (rv0 << 2);
+        auto gv1 = (gv0 >> 6) | (gv0 << 1);
+        auto bv1 = (bv0 >> 4) | (bv0 << 2);
 
         auto rv2 = rv1 - ro1;
         auto gv2 = gv1 - go1;
         auto bv2 = bv1 - bo1;
 
-        __m256i rv3 = _mm256_set1_epi16( rv2 );
-        __m256i gv3 = _mm256_set1_epi16( gv2 );
-        __m256i bv3 = _mm256_set1_epi16( bv2 );
+        __m256i rv3 = _mm256_set1_epi16(rv2);
+        __m256i gv3 = _mm256_set1_epi16(gv2);
+        __m256i bv3 = _mm256_set1_epi16(bv2);
 
-        __m256i x = _mm256_set_epi16( 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0 );
+        __m256i x = _mm256_set_epi16(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0);
 
-        __m256i rh4 = _mm256_mullo_epi16( rh3, x );
-        __m256i gh4 = _mm256_mullo_epi16( gh3, x );
-        __m256i bh4 = _mm256_mullo_epi16( bh3, x );
+        __m256i rh4 = _mm256_mullo_epi16(rh3, x);
+        __m256i gh4 = _mm256_mullo_epi16(gh3, x);
+        __m256i bh4 = _mm256_mullo_epi16(bh3, x);
 
-        __m256i y = _mm256_set_epi16( 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0 );
+        __m256i y = _mm256_set_epi16(3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0);
 
-        __m256i rv4 = _mm256_mullo_epi16( rv3, y );
-        __m256i gv4 = _mm256_mullo_epi16( gv3, y );
-        __m256i bv4 = _mm256_mullo_epi16( bv3, y );
+        __m256i rv4 = _mm256_mullo_epi16(rv3, y);
+        __m256i gv4 = _mm256_mullo_epi16(gv3, y);
+        __m256i bv4 = _mm256_mullo_epi16(bv3, y);
 
-        __m256i rxy = _mm256_add_epi16( rh4, rv4 );
-        __m256i gxy = _mm256_add_epi16( gh4, gv4 );
-        __m256i bxy = _mm256_add_epi16( bh4, bv4 );
+        __m256i rxy = _mm256_add_epi16(rh4, rv4);
+        __m256i gxy = _mm256_add_epi16(gh4, gv4);
+        __m256i bxy = _mm256_add_epi16(bh4, bv4);
 
-        __m256i rp0 = _mm256_add_epi16( rxy, ro3 );
-        __m256i gp0 = _mm256_add_epi16( gxy, go3 );
-        __m256i bp0 = _mm256_add_epi16( bxy, bo3 );
+        __m256i rp0 = _mm256_add_epi16(rxy, ro3);
+        __m256i gp0 = _mm256_add_epi16(gxy, go3);
+        __m256i bp0 = _mm256_add_epi16(bxy, bo3);
 
-        __m256i rp1 = _mm256_srai_epi16( rp0, 2 );
-        __m256i gp1 = _mm256_srai_epi16( gp0, 2 );
-        __m256i bp1 = _mm256_srai_epi16( bp0, 2 );
+        __m256i rp1 = _mm256_srai_epi16(rp0, 2);
+        __m256i gp1 = _mm256_srai_epi16(gp0, 2);
+        __m256i bp1 = _mm256_srai_epi16(bp0, 2);
 
-        __m256i rp2 = _mm256_max_epi16( _mm256_min_epi16( rp1, _mm256_set1_epi16( 255 ) ), _mm256_setzero_si256() );
-        __m256i gp2 = _mm256_max_epi16( _mm256_min_epi16( gp1, _mm256_set1_epi16( 255 ) ), _mm256_setzero_si256() );
-        __m256i bp2 = _mm256_max_epi16( _mm256_min_epi16( bp1, _mm256_set1_epi16( 255 ) ), _mm256_setzero_si256() );
+        __m256i rp2 = _mm256_max_epi16(_mm256_min_epi16(rp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
+        __m256i gp2 = _mm256_max_epi16(_mm256_min_epi16(gp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
+        __m256i bp2 = _mm256_max_epi16(_mm256_min_epi16(bp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
 
-        __m256i rdif = _mm256_sub_epi16( r08, rp2 );
-        __m256i gdif = _mm256_sub_epi16( g08, gp2 );
-        __m256i bdif = _mm256_sub_epi16( b08, bp2 );
+        __m256i rdif = _mm256_sub_epi16(r08, rp2);
+        __m256i gdif = _mm256_sub_epi16(g08, gp2);
+        __m256i bdif = _mm256_sub_epi16(b08, bp2);
 
         __m256i rerr = _mm256_mullo_epi16( rdif, _mm256_set1_epi16( 38 ) );
         __m256i gerr = _mm256_mullo_epi16( gdif, _mm256_set1_epi16( 76 ) );
@@ -1005,9 +1009,278 @@ static etcpak_force_inline Plane Planar_AVX2( const Channels& ch, uint8_t& mode,
         uint32_t err2 = _mm_extract_epi32( sum3, 2 );
         uint32_t err3 = _mm_extract_epi32( sum3, 3 );
 
-        error = err0 + err1 + err2 + err3;
+     error = err0 + err1 + err2 + err3;
     }
     /**/
+
+    uint32_t rgbv = (rgbv0 & 0x3F) | ((rgbv0 >> 2) & 0x1FC0) | ((rgbv0 >> 3) & 0x7E000);
+    uint64_t rgbho0_ = (rgbho & 0x3F0000003F) | ((rgbho >> 2) & 0x1FC000001FC0) | ((rgbho >> 3) & 0x7E0000007E000);
+    uint64_t rgbho0 = (rgbho0_ & 0x7FFFF) | ((rgbho0_ >> 13) & 0x3FFFF80000);
+
+    uint32_t hi = rgbv | ((rgbho0 & 0x1FFF) << 19);
+    rgbho0 >>= 13;
+    uint32_t lo = (rgbho0 & 0x1) | ((rgbho0 & 0x1FE) << 1) | ((rgbho0 & 0x600) << 2) | ((rgbho0 & 0x3F800) << 5) | ((rgbho0 & 0x1FC0000) << 6);
+
+    uint32_t idx = ((rgbho >> 33) & 0xF) | ((rgbho >> 41) & 0x10) | ((rgbho >> 48) & 0x20);
+    lo |= g_flags[idx];
+    uint64_t result = static_cast<uint32_t>(_bswap(lo));
+    result |= static_cast<uint64_t>(static_cast<uint32_t>(_bswap(hi))) << 32;
+
+    Plane plane;
+
+    plane.plane = result;
+    if (useHeuristics)
+    {
+        plane.error = 0;
+        mode = ModePlanar;
+    }
+    else
+    {
+        plane.error = error;
+    }
+    plane.sum4 = _mm256_permute4x64_epi64(srgb, _MM_SHUFFLE(2, 3, 0, 1));
+
+    return plane;
+}
+
+
+static etcpak_force_inline Plane Planar_AVX2(const Channels& ch, uint8_t& mode, bool useHeuristics, bool& isHighError)
+{
+    __m128i t0 = _mm_sad_epu8(ch.r8, _mm_setzero_si128());
+    __m128i t1 = _mm_sad_epu8(ch.g8, _mm_setzero_si128());
+    __m128i t2 = _mm_sad_epu8(ch.b8, _mm_setzero_si128());
+
+    __m128i r8s = _mm_shuffle_epi8(ch.r8, _mm_set_epi8(0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0));
+    __m128i g8s = _mm_shuffle_epi8(ch.g8, _mm_set_epi8(0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0));
+    __m128i b8s = _mm_shuffle_epi8(ch.b8, _mm_set_epi8(0xF, 0xE, 0xB, 0xA, 0x7, 0x6, 0x3, 0x2, 0xD, 0xC, 0x9, 0x8, 0x5, 0x4, 0x1, 0x0));
+
+    __m128i s0 = _mm_sad_epu8(r8s, _mm_setzero_si128());
+    __m128i s1 = _mm_sad_epu8(g8s, _mm_setzero_si128());
+    __m128i s2 = _mm_sad_epu8(b8s, _mm_setzero_si128());
+
+    __m256i sr0 = _mm256_insertf128_si256(_mm256_castsi128_si256(t0), s0, 1);
+    __m256i sg0 = _mm256_insertf128_si256(_mm256_castsi128_si256(t1), s1, 1);
+    __m256i sb0 = _mm256_insertf128_si256(_mm256_castsi128_si256(t2), s2, 1);
+
+    __m256i sr1 = _mm256_slli_epi64(sr0, 32);
+    __m256i sg1 = _mm256_slli_epi64(sg0, 16);
+
+    __m256i srb = _mm256_or_si256(sr1, sb0);
+    __m256i srgb = _mm256_or_si256(srb, sg1);
+
+    if (mode != ModePlanar && useHeuristics)
+    {
+        Plane plane;
+        plane.sum4 = _mm256_permute4x64_epi64(srgb, _MM_SHUFFLE(2, 3, 0, 1));
+        return plane;
+    }
+
+    __m128i t3 = _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(t0), _mm_castsi128_ps(t1), _MM_SHUFFLE(2, 0, 2, 0)));
+    __m128i t4 = _mm_shuffle_epi32(t2, _MM_SHUFFLE(3, 1, 2, 0));
+    __m128i t5 = _mm_hadd_epi32(t3, t4);
+    __m128i t6 = _mm_shuffle_epi32(t5, _MM_SHUFFLE(1, 1, 1, 1));
+    __m128i t7 = _mm_shuffle_epi32(t5, _MM_SHUFFLE(2, 2, 2, 2));
+
+    __m256i sr = _mm256_broadcastw_epi16(t5);
+    __m256i sg = _mm256_broadcastw_epi16(t6);
+    __m256i sb = _mm256_broadcastw_epi16(t7);
+
+    __m256i r08 = _mm256_cvtepu8_epi16(ch.r8);
+    __m256i g08 = _mm256_cvtepu8_epi16(ch.g8);
+    __m256i b08 = _mm256_cvtepu8_epi16(ch.b8);
+
+    __m256i r16 = _mm256_slli_epi16(r08, 4);
+    __m256i g16 = _mm256_slli_epi16(g08, 4);
+    __m256i b16 = _mm256_slli_epi16(b08, 4);
+
+    __m256i difR0 = _mm256_sub_epi16(r16, sr);
+    __m256i difG0 = _mm256_sub_epi16(g16, sg);
+    __m256i difB0 = _mm256_sub_epi16(b16, sb);
+
+    __m256i difRyz = _mm256_madd_epi16(difR0, _mm256_set_epi16(255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255));
+    __m256i difGyz = _mm256_madd_epi16(difG0, _mm256_set_epi16(255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255));
+    __m256i difByz = _mm256_madd_epi16(difB0, _mm256_set_epi16(255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255, 255, 85, -85, -255));
+
+    __m256i difRxz = _mm256_madd_epi16(difR0, _mm256_set_epi16(255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255));
+    __m256i difGxz = _mm256_madd_epi16(difG0, _mm256_set_epi16(255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255));
+    __m256i difBxz = _mm256_madd_epi16(difB0, _mm256_set_epi16(255, 255, 255, 255, 85, 85, 85, 85, -85, -85, -85, -85, -255, -255, -255, -255));
+
+    __m256i difRGyz = _mm256_hadd_epi32(difRyz, difGyz);
+    __m256i difByzxz = _mm256_hadd_epi32(difByz, difBxz);
+
+    __m256i difRGxz = _mm256_hadd_epi32(difRxz, difGxz);
+
+    __m128i sumRGyz = _mm_add_epi32(_mm256_castsi256_si128(difRGyz), _mm256_extracti128_si256(difRGyz, 1));
+    __m128i sumByzxz = _mm_add_epi32(_mm256_castsi256_si128(difByzxz), _mm256_extracti128_si256(difByzxz, 1));
+    __m128i sumRGxz = _mm_add_epi32(_mm256_castsi256_si128(difRGxz), _mm256_extracti128_si256(difRGxz, 1));
+
+    __m128i sumRGByz = _mm_hadd_epi32(sumRGyz, sumByzxz);
+    __m128i sumRGByzxz = _mm_hadd_epi32(sumRGxz, sumByzxz);
+
+    __m128i sumRGBxz = _mm_shuffle_epi32(sumRGByzxz, _MM_SHUFFLE(2, 3, 1, 0));
+
+    __m128 sumRGByzf = _mm_cvtepi32_ps(sumRGByz);
+    __m128 sumRGBxzf = _mm_cvtepi32_ps(sumRGBxz);
+
+    const float value = (255 * 255 * 8.0f + 85 * 85 * 8.0f) * 16.0f;
+
+    __m128 scale = _mm_set1_ps(-4.0f / value);
+
+    __m128 af = _mm_mul_ps(sumRGBxzf, scale);
+    __m128 bf = _mm_mul_ps(sumRGByzf, scale);
+
+    __m128 df = _mm_mul_ps(_mm_cvtepi32_ps(t5), _mm_set1_ps(4.0f / 16.0f));
+
+    // calculating the three colors RGBO, RGBH, and RGBV.  RGB = df - af * x - bf * y;
+    __m128 cof0 = _mm_fnmadd_ps(af, _mm_set1_ps(-255.0f), _mm_fnmadd_ps(bf, _mm_set1_ps(-255.0f), df));
+    __m128 chf0 = _mm_fnmadd_ps(af, _mm_set1_ps(425.0f), _mm_fnmadd_ps(bf, _mm_set1_ps(-255.0f), df));
+    __m128 cvf0 = _mm_fnmadd_ps(af, _mm_set1_ps(-255.0f), _mm_fnmadd_ps(bf, _mm_set1_ps(425.0f), df));
+
+    // convert to r6g7b6
+    __m128i cohv = r6g7b6_AVX2(cof0, chf0, cvf0);
+
+    uint64_t rgbho = _mm_extract_epi64(cohv, 0);
+    uint32_t rgbv0 = _mm_extract_epi32(cohv, 2);
+
+    // ReCalculation Error 
+    uint64_t terr = 0;
+    // Error calculation
+    uint64_t error = 0;
+    //if( !useHeuristics )
+    //{
+    auto ro0 = (rgbho >> 48) & 0x3F;
+    auto go0 = (rgbho >> 40) & 0x7F;
+    auto bo0 = (rgbho >> 32) & 0x3F;
+    auto ro1 = (ro0 >> 4) | (ro0 << 2);
+    auto go1 = (go0 >> 6) | (go0 << 1);
+    auto bo1 = (bo0 >> 4) | (bo0 << 2);
+    auto ro2 = (ro1 << 2) + 2;
+    auto go2 = (go1 << 2) + 2;
+    auto bo2 = (bo1 << 2) + 2;
+
+    __m256i ro3 = _mm256_set1_epi16(ro2);
+    __m256i go3 = _mm256_set1_epi16(go2);
+    __m256i bo3 = _mm256_set1_epi16(bo2);
+
+    auto rh0 = (rgbho >> 16) & 0x3F;
+    auto gh0 = (rgbho >> 8) & 0x7F;
+    auto bh0 = (rgbho >> 0) & 0x3F;
+    auto rh1 = (rh0 >> 4) | (rh0 << 2);
+    auto gh1 = (gh0 >> 6) | (gh0 << 1);
+    auto bh1 = (bh0 >> 4) | (bh0 << 2);
+
+    auto rh2 = rh1 - ro1;
+    auto gh2 = gh1 - go1;
+    auto bh2 = bh1 - bo1;
+
+    __m256i rh3 = _mm256_set1_epi16(rh2);
+    __m256i gh3 = _mm256_set1_epi16(gh2);
+    __m256i bh3 = _mm256_set1_epi16(bh2);
+
+    auto rv0 = (rgbv0 >> 16) & 0x3F;
+    auto gv0 = (rgbv0 >> 8) & 0x7F;
+    auto bv0 = (rgbv0 >> 0) & 0x3F;
+    auto rv1 = (rv0 >> 4) | (rv0 << 2);
+    auto gv1 = (gv0 >> 6) | (gv0 << 1);
+    auto bv1 = (bv0 >> 4) | (bv0 << 2);
+
+    auto rv2 = rv1 - ro1;
+    auto gv2 = gv1 - go1;
+    auto bv2 = bv1 - bo1;
+
+    __m256i rv3 = _mm256_set1_epi16(rv2);
+    __m256i gv3 = _mm256_set1_epi16(gv2);
+    __m256i bv3 = _mm256_set1_epi16(bv2);
+
+    __m256i x = _mm256_set_epi16(3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0);
+
+    __m256i rh4 = _mm256_mullo_epi16(rh3, x);
+    __m256i gh4 = _mm256_mullo_epi16(gh3, x);
+    __m256i bh4 = _mm256_mullo_epi16(bh3, x);
+
+    __m256i y = _mm256_set_epi16(3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0);
+
+    __m256i rv4 = _mm256_mullo_epi16(rv3, y);
+    __m256i gv4 = _mm256_mullo_epi16(gv3, y);
+    __m256i bv4 = _mm256_mullo_epi16(bv3, y);
+
+    __m256i rxy = _mm256_add_epi16(rh4, rv4);
+    __m256i gxy = _mm256_add_epi16(gh4, gv4);
+    __m256i bxy = _mm256_add_epi16(bh4, bv4);
+
+    __m256i rp0 = _mm256_add_epi16(rxy, ro3);
+    __m256i gp0 = _mm256_add_epi16(gxy, go3);
+    __m256i bp0 = _mm256_add_epi16(bxy, bo3);
+
+    __m256i rp1 = _mm256_srai_epi16(rp0, 2);
+    __m256i gp1 = _mm256_srai_epi16(gp0, 2);
+    __m256i bp1 = _mm256_srai_epi16(bp0, 2);
+
+    __m256i rp2 = _mm256_max_epi16(_mm256_min_epi16(rp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
+    __m256i gp2 = _mm256_max_epi16(_mm256_min_epi16(gp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
+    __m256i bp2 = _mm256_max_epi16(_mm256_min_epi16(bp1, _mm256_set1_epi16(255)), _mm256_setzero_si256());
+
+    __m256i rdif = _mm256_sub_epi16(r08, rp2);
+    __m256i gdif = _mm256_sub_epi16(g08, gp2);
+    __m256i bdif = _mm256_sub_epi16(b08, bp2);
+
+    // add hyeon
+    // =========================================================================================
+    // 절댓값 적용.
+    rdif = _mm256_abs_epi16(rdif);
+    gdif = _mm256_abs_epi16(gdif);
+    bdif = _mm256_abs_epi16(bdif);
+
+    // 각 pixel 마다 비교하기 위해, 16 array에 저장.
+    alignas(8) uint8_t redError[16];
+    alignas(8) uint8_t blueError[16];
+    alignas(8) uint8_t greenError[16];
+
+    // seperate RGB Data error 
+    _mm256_storeu_si256((__m256i*) &redError[0], rdif);
+    _mm256_storeu_si256((__m256i*) &blueError[0], bdif);
+    _mm256_storeu_si256((__m256i*) &greenError[0], gdif);
+    uint32_t mulFactor = 128;
+
+    for (int i = 0; i < 16; i++)
+    {
+        uint64_t rErr = redError[i];
+        uint64_t bErr = blueError[i];
+        uint64_t gErr = greenError[i];
+
+        uint64_t err = rErr > gErr ? rErr : gErr;
+        err = err > bErr ? err : bErr;
+        err *= mulFactor;
+        terr += err * err;
+    }
+    // add hyeon
+    // =========================================================================================
+
+    //__m256i rerr = _mm256_mullo_epi16( rdif, _mm256_set1_epi16( 38 ) );
+    //__m256i gerr = _mm256_mullo_epi16( gdif, _mm256_set1_epi16( 76 ) );
+    //__m256i berr = _mm256_mullo_epi16( bdif, _mm256_set1_epi16( 14 ) );
+
+    //__m256i sum0 = _mm256_add_epi16( rerr, gerr );
+    //__m256i sum1 = _mm256_add_epi16( sum0, berr );
+
+    //__m256i sum2 = _mm256_madd_epi16( sum1, sum1 );
+
+    //__m128i sum3 = _mm_add_epi32( _mm256_castsi256_si128( sum2 ), _mm256_extracti128_si256( sum2, 1 ) );
+
+    //uint32_t err0 = _mm_extract_epi32( sum3, 0 );
+    //uint32_t err1 = _mm_extract_epi32( sum3, 1 );
+    //uint32_t err2 = _mm_extract_epi32( sum3, 2 );
+    //uint32_t err3 = _mm_extract_epi32( sum3, 3 );
+
+    // error = err0 + err1 + err2 + err3;
+    //}
+    /**/
+
+    //printf("%llu\n", terr);
+    if (terr > errorThreshold) 
+    {
+        isHighError = true;
+    }
 
     uint32_t rgbv = ( rgbv0 & 0x3F ) | ( ( rgbv0 >> 2 ) & 0x1FC0 ) | ( ( rgbv0 >> 3 ) & 0x7E000 );
     uint64_t rgbho0_ = ( rgbho & 0x3F0000003F ) | ( ( rgbho >> 2 ) & 0x1FC000001FC0 ) | ( ( rgbho >> 3 ) & 0x7E0000007E000 );
@@ -1131,7 +1404,7 @@ static etcpak_force_inline void  RecalculateError(uint64_t& terr, const uint32_t
 #else
         // origin
         // int64_t err = abs(dr + tab[j]) * 38 + abs(dg + tab[j]) * 76 + abs(db + tab[j]) * 14;
-        int64_t err = abs(dr + tab[j])> abs(dg + tab[j]) ? abs(dr + tab[j]) : abs(dg + tab[j]);
+        int64_t err = abs(dr + tab[j]) > abs(dg + tab[j]) ? abs(dr + tab[j]) : abs(dg + tab[j]);
         err = err > abs(db + tab[j]) ? err : abs(db + tab[j]);
         err *= 128;
 #endif
@@ -1146,7 +1419,7 @@ static etcpak_force_inline uint64_t EncodeSelectors_AVX2(uint64_t d, const uint3
     // uint64_t errorThreshold = 10000000;
     //uint64_t errorThreshold = 4609145;
     // uint64_t errorThreshold = 4370000;
-    uint64_t errorThreshold = 2373763; // final threshold 
+    // uint64_t errorThreshold = 2373763; // final threshold 
 
     uint64_t blockError = 0u;
     // Get index of minimum error (terr[0] and terr[1])
@@ -2271,7 +2544,7 @@ uint32_t ReCalcErrorTH(uint8_t bestPossibleColors[4][3], uint32_t pixIndices, __
     uint32_t pixColors = 0;
     uint32_t terr = 0;
 
-    #ifdef __AVX2__
+ #ifdef __AVX2__
     alignas(8) uint8_t r[16] = { 0, };
     alignas(8) uint8_t g[16] = { 0, };
     alignas(8) uint8_t b[16] = { 0, };
@@ -2302,8 +2575,8 @@ uint32_t ReCalcErrorTH(uint8_t bestPossibleColors[4][3], uint32_t pixIndices, __
             g_err = abs(g[x * 4 + y] - bestPossibleColors[c][G]);
             b_err = abs(b[x * 4 + y] - bestPossibleColors[c][B]);
 
-            err = r_err < g_err ? r_err : g_err;
-            err = err < b_err ? err : b_err;
+            err = r_err > g_err ? r_err : g_err;
+            err = err > b_err ? err : b_err;
             err *= mulFactor;
             terr += err * err;
            
@@ -2458,14 +2731,162 @@ uint32_t calculateErrorTH( bool tMode, uint8_t* src, uint8_t( colorsRGB444 )[2][
             bestBlockErr = blockErr;
             dist = d;
             pixIndices = pixColors;
+        }
+    }
+
+    return bestBlockErr;
+}
+
+uint32_t calculateErrorTH(bool tMode, uint8_t(colorsRGB444)[2][3], uint8_t& dist, uint32_t& pixIndices, uint8_t startDist, __m128i r8, __m128i g8, __m128i b8, bool &isHighError)
+
+{
+    uint32_t blockErr = 0, bestBlockErr = MaxError;
+
+    uint32_t pixColors;
+    uint8_t possibleColors[4][3];
+    uint8_t colors[2][3];
+
+    decompressColor(colorsRGB444, colors);
+
+    uint8_t bestPossibleColors[4][3];
+
+#ifdef __AVX2__
+    __m128i reverseMask = _mm_set_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+#endif
+
+    // test distances
+    for (uint8_t d = startDist; d < 8; ++d)
+    {
+        if (d >= 2 && dist == d - 2) break;
+
+        blockErr = 0;
+        pixColors = 0;
+
+        if (tMode)
+        {
+            calculatePaintColors59T(d, colors, possibleColors);
+        }
+        else
+        {
+            calculatePaintColors58H(d, colors, possibleColors);
+        }
+
+#ifdef __AVX2__
+        // RGB ordering
+        __m128i b8Rev = _mm_shuffle_epi8(b8, reverseMask);
+        __m128i g8Rev = _mm_shuffle_epi8(g8, reverseMask);
+        __m128i r8Rev = _mm_shuffle_epi8(r8, reverseMask);
+
+        // extends 3x128 bits RGB into 3x256 bits RGB for error comparisions
+        static const __m128i zero = _mm_setzero_si128();
+        __m128i b8Lo = _mm_unpacklo_epi8(b8Rev, zero);
+        __m128i g8Lo = _mm_unpacklo_epi8(g8Rev, zero);
+        __m128i r8Lo = _mm_unpacklo_epi8(r8Rev, zero);
+        __m128i b8Hi = _mm_unpackhi_epi8(b8Rev, zero);
+        __m128i g8Hi = _mm_unpackhi_epi8(g8Rev, zero);
+        __m128i r8Hi = _mm_unpackhi_epi8(r8Rev, zero);
+
+        __m256i b8 = _mm256_set_m128i(b8Hi, b8Lo);
+        __m256i g8 = _mm256_set_m128i(g8Hi, g8Lo);
+        __m256i r8 = _mm256_set_m128i(r8Hi, r8Lo);
+
+        // caculates differences between the pixel colrs and the palette colors
+        __m256i diffb = _mm256_abs_epi16(_mm256_sub_epi16(b8, _mm256_set1_epi16(possibleColors[0][B])));
+        __m256i diffg = _mm256_abs_epi16(_mm256_sub_epi16(g8, _mm256_set1_epi16(possibleColors[0][G])));
+        __m256i diffr = _mm256_abs_epi16(_mm256_sub_epi16(r8, _mm256_set1_epi16(possibleColors[0][R])));
+
+        // luma-based error calculations
+        static const __m256i bWeight = _mm256_set1_epi16(14);
+        static const __m256i gWeight = _mm256_set1_epi16(76);
+        static const __m256i rWeight = _mm256_set1_epi16(38);
+
+        diffb = _mm256_mullo_epi16(diffb, bWeight);
+        diffg = _mm256_mullo_epi16(diffg, gWeight);
+        diffr = _mm256_mullo_epi16(diffr, rWeight);
+
+        // obtains the error with the current palette color
+        __m256i lowestPixErr = _mm256_add_epi16(_mm256_add_epi16(diffb, diffg), diffr);
+
+        // error calucations with the remaining three palette colors
+        static const uint32_t masks[4] = { 0, 0x55555555, 0xAAAAAAAA, 0xFFFFFFFF };
+        for (uint8_t c = 1; c < 4; c++)
+        {
+            __m256i diffb = _mm256_abs_epi16(_mm256_sub_epi16(b8, _mm256_set1_epi16(possibleColors[c][B])));
+            __m256i diffg = _mm256_abs_epi16(_mm256_sub_epi16(g8, _mm256_set1_epi16(possibleColors[c][G])));
+            __m256i diffr = _mm256_abs_epi16(_mm256_sub_epi16(r8, _mm256_set1_epi16(possibleColors[c][R])));
+
+            diffb = _mm256_mullo_epi16(diffb, bWeight);
+            diffg = _mm256_mullo_epi16(diffg, gWeight);
+            diffr = _mm256_mullo_epi16(diffr, rWeight);
+
+            // error comparison with the previous best color
+            __m256i pixErrors = _mm256_add_epi16(_mm256_add_epi16(diffb, diffg), diffr);
+            __m256i minErr = _mm256_min_epu16(lowestPixErr, pixErrors);
+            __m256i cmpRes = _mm256_cmpeq_epi16(pixErrors, minErr);
+            lowestPixErr = minErr;
+
+            // update pixel colors
+            uint32_t updPixColors = _mm256_movemask_epi8(cmpRes);
+            uint32_t prevPixColors = pixColors & ~updPixColors;
+            uint32_t mskPixColors = masks[c] & updPixColors;
+            pixColors = prevPixColors | mskPixColors;
+        }
+
+        // accumulate the block error
+        alignas(32) uint16_t pixErr16[16] = { 0, };
+        _mm256_storeu_si256((__m256i*)pixErr16, lowestPixErr);
+        for (uint8_t p = 0; p < 16; p++)
+        {
+            blockErr += (int)(pixErr16[p]) * pixErr16[p];
+        }
+#else
+        for (size_t y = 0; y < 4; ++y)
+        {
+            for (size_t x = 0; x < 4; ++x)
+            {
+                uint32_t bestPixErr = MaxError;
+                pixColors <<= 2; // Make room for next value
+
+                // Loop possible block colors
+                for (uint8_t c = 0; c < 4; ++c)
+                {
+                    int diff[3];
+                    diff[R] = src[4 * (x * 4 + y) + R] - possibleColors[c][R];
+                    diff[G] = src[4 * (x * 4 + y) + G] - possibleColors[c][G];
+                    diff[B] = src[4 * (x * 4 + y) + B] - possibleColors[c][B];
+
+                    const uint32_t err = 38 * abs(diff[R]) + 76 * abs(diff[G]) + 14 * abs(diff[B]);
+                    uint32_t pixErr = err * err;
+
+                    // Choose best error
+                    if (pixErr < bestPixErr)
+                    {
+                        bestPixErr = pixErr;
+                        pixColors ^= (pixColors & 3); // Reset the two first bits
+                        pixColors |= c;
+                    }
+                }
+                blockErr += bestPixErr;
+            }
+        }
+#endif
+
+        if (blockErr < bestBlockErr)
+        {
+            bestBlockErr = blockErr;
+            dist = d;
+            pixIndices = pixColors;
             memcpy(bestPossibleColors, possibleColors, 96);
         }
     }
 
-    uint32_t finalError = ReCalcErrorTH(bestPossibleColors, pixIndices, r8, g8, b8);
-
-    // return bestBlockErr;
-    return finalError;
+    uint32_t recalcError = ReCalcErrorTH(bestPossibleColors, pixIndices, r8, g8, b8);
+    if (recalcError > errorThreshold)
+    {
+        isHighError = true;
+    }
+    //printf("%llu\n", recalcError);
+    return bestBlockErr;
 }
 
 // main T-/H-mode compression function
@@ -2686,6 +3107,226 @@ uint32_t compressBlockTH( uint8_t *src, Luma& l, uint32_t& compressed1, uint32_t
     bestPixIndices = indexConversion( bestPixIndices );
     compressed2 = 0;
     compressed2 = ( compressed2 & ~( ( 0x2 << 31 ) - 1 ) ) | ( bestPixIndices & ( ( 2 << 31 ) - 1 ) );
+
+    return bestErr;
+}
+//#endif
+
+// main T-/H-mode compression function
+uint32_t compressBlockTH(uint8_t* src, Luma& l, uint32_t& compressed1, uint32_t& compressed2, bool& tMode, __m128i r8, __m128i g8, __m128i b8, bool &isHighError)
+
+{
+#ifdef __AVX2__
+    alignas(8) uint8_t luma[16] = { 0, };
+    _mm_storeu_si128((__m128i*)luma, l.luma8);
+#elif defined __ARM_NEON && defined __aarch64__
+    alignas(8) uint8_t luma[16] = { 0 };
+    vst1q_u8(luma, l.luma8);
+#else
+    uint8_t* luma = l.val;
+#endif
+
+    uint8_t pixIdx[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    // 1) sorts the pairs of (luma, pix_idx)
+    insertionSort(luma, pixIdx);
+
+    // 2) finds the min (left+right)
+    uint8_t minSumRangeIdx = 0;
+    uint16_t minSumRangeValue;
+    uint16_t sum;
+    static const uint8_t diffBonus[15] = { 8, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 4, 8 };
+    const int16_t temp = luma[15] - luma[0];
+
+    minSumRangeValue = luma[15] - luma[1] + diffBonus[0];
+    for (uint8_t i = 1; i < 14; i++)
+    {
+        sum = temp - luma[i + 1] + luma[i] + diffBonus[i];
+        if (minSumRangeValue > sum)
+        {
+            minSumRangeValue = sum;
+            minSumRangeIdx = i;
+        }
+    }
+
+    sum = luma[14] - luma[0] + diffBonus[14];
+    if (minSumRangeValue > sum)
+    {
+        minSumRangeValue = sum;
+        minSumRangeIdx = 14;
+    }
+    uint8_t lRange, rRange;
+
+    lRange = luma[minSumRangeIdx] - luma[0];
+    rRange = luma[15] - luma[minSumRangeIdx + 1];
+
+    // 3) sets a proper mode
+    bool swap = false;
+    if (lRange >= rRange)
+    {
+        if (lRange >= rRange * 2)
+        {
+            swap = true;
+            tMode = true;
+        }
+    }
+    else
+    {
+        if (lRange * 2 <= rRange) tMode = true;
+    }
+    // 4) calculates the two base colors
+    uint8_t rangeIdx[4] = { pixIdx[0], pixIdx[minSumRangeIdx], pixIdx[minSumRangeIdx + 1], pixIdx[15] };
+
+    uint16_t r[4], g[4], b[4];
+    for (uint8_t i = 0; i < 4; ++i)
+    {
+        uint8_t idx = rangeIdx[i] * 4;
+        b[i] = src[idx];
+        g[i] = src[idx + 1];
+        r[i] = src[idx + 2];
+    }
+
+    uint8_t mid_rgb[2][3];
+    if (swap)
+    {
+        mid_rgb[1][B] = (b[0] + b[1]) / 2;
+        mid_rgb[1][G] = (g[0] + g[1]) / 2;
+        mid_rgb[1][R] = (r[0] + r[1]) / 2;
+
+        uint16_t sum_rgb[3] = { 0, 0, 0 };
+        for (uint8_t i = minSumRangeIdx + 1; i < 16; i++)
+        {
+            uint8_t idx = pixIdx[i] * 4;
+            sum_rgb[B] += src[idx];
+            sum_rgb[G] += src[idx + 1];
+            sum_rgb[R] += src[idx + 2];
+        }
+        const uint8_t temp = 15 - minSumRangeIdx;
+        mid_rgb[0][B] = sum_rgb[B] / temp;
+        mid_rgb[0][G] = sum_rgb[G] / temp;
+        mid_rgb[0][R] = sum_rgb[R] / temp;
+    }
+    else
+    {
+        mid_rgb[0][B] = (b[0] + b[1]) / 2;
+        mid_rgb[0][G] = (g[0] + g[1]) / 2;
+        mid_rgb[0][R] = (r[0] + r[1]) / 2;
+        if (tMode)
+        {
+            uint16_t sum_rgb[3] = { 0, 0, 0 };
+            for (uint8_t i = minSumRangeIdx + 1; i < 16; i++)
+            {
+                uint8_t idx = pixIdx[i] * 4;
+                sum_rgb[B] += src[idx];
+                sum_rgb[G] += src[idx + 1];
+                sum_rgb[R] += src[idx + 2];
+            }
+            const uint8_t temp = 15 - minSumRangeIdx;
+            mid_rgb[1][B] = sum_rgb[B] / temp;
+            mid_rgb[1][G] = sum_rgb[G] / temp;
+            mid_rgb[1][R] = sum_rgb[R] / temp;
+        }
+        else
+        {
+            mid_rgb[1][B] = (b[2] + b[3]) / 2;
+            mid_rgb[1][G] = (g[2] + g[3]) / 2;
+            mid_rgb[1][R] = (r[2] + r[3]) / 2;
+        }
+    }
+
+    // 5) sets the start distance index
+    uint32_t startDistCandidate;
+    uint32_t avgDist;
+    if (tMode)
+    {
+        if (swap)
+        {
+            avgDist = (b[1] - b[0] + g[1] - g[0] + r[1] - r[0]) / 6;
+        }
+        else
+        {
+            avgDist = (b[3] - b[2] + g[3] - g[2] + r[3] - r[2]) / 6;
+        }
+    }
+    else
+    {
+        avgDist = (b[1] - b[0] + g[1] - g[0] + r[1] - r[0] + b[3] - b[2] + g[3] - g[2] + r[3] - r[2]) / 12;
+    }
+
+    if (avgDist <= 16)
+    {
+        startDistCandidate = 0;
+    }
+    else if (avgDist <= 23)
+    {
+        startDistCandidate = 1;
+    }
+    else if (avgDist <= 32)
+    {
+        startDistCandidate = 2;
+    }
+    else if (avgDist <= 41)
+    {
+        startDistCandidate = 3;
+    }
+    else
+    {
+        startDistCandidate = 4;
+    }
+
+    uint32_t bestErr = MaxError;
+    uint32_t bestPixIndices;
+    uint8_t bestDist = 10;
+    uint8_t colorsRGB444[2][3];
+    compressColor(mid_rgb, colorsRGB444, tMode);
+    compressed1 = 0;
+
+    // 6) finds the best candidate with the lowest error
+#ifdef __AVX2__
+    // Vectorized ver
+    bestErr = calculateErrorTH(tMode, colorsRGB444, bestDist, bestPixIndices, startDistCandidate, r8, g8, b8, isHighError);
+#else
+    // Scalar ver
+    bestErr = calculateErrorTH(tMode, src, colorsRGB444, bestDist, bestPixIndices, startDistCandidate);
+#endif
+
+    // 7) outputs the final T or H block
+    if (tMode)
+    {
+        // Put the compress params into the compression block
+        compressed1 |= (colorsRGB444[0][R] & 0xf) << 23;
+        compressed1 |= (colorsRGB444[0][G] & 0xf) << 19;
+        compressed1 |= (colorsRGB444[0][B]) << 15;
+        compressed1 |= (colorsRGB444[1][R]) << 11;
+        compressed1 |= (colorsRGB444[1][G]) << 7;
+        compressed1 |= (colorsRGB444[1][B]) << 3;
+        compressed1 |= bestDist & 0x7;
+    }
+    else
+    {
+        int bestRGB444ColPacked[2];
+        bestRGB444ColPacked[0] = (colorsRGB444[0][R] << 8) + (colorsRGB444[0][G] << 4) + colorsRGB444[0][B];
+        bestRGB444ColPacked[1] = (colorsRGB444[1][R] << 8) + (colorsRGB444[1][G] << 4) + colorsRGB444[1][B];
+        if ((bestRGB444ColPacked[0] >= bestRGB444ColPacked[1]) ^ ((bestDist & 1) == 1))
+        {
+            swapColors(colorsRGB444);
+            // Reshuffle pixel indices to to exchange C1 with C3, and C2 with C4
+            bestPixIndices = (0x55555555 & bestPixIndices) | (0xaaaaaaaa & (~bestPixIndices));
+        }
+
+        // Put the compress params into the compression block
+        compressed1 |= (colorsRGB444[0][R] & 0xf) << 22;
+        compressed1 |= (colorsRGB444[0][G] & 0xf) << 18;
+        compressed1 |= (colorsRGB444[0][B] & 0xf) << 14;
+        compressed1 |= (colorsRGB444[1][R] & 0xf) << 10;
+        compressed1 |= (colorsRGB444[1][G] & 0xf) << 6;
+        compressed1 |= (colorsRGB444[1][B] & 0xf) << 2;
+        compressed1 |= (bestDist >> 1) & 0x3;
+    }
+
+    bestPixIndices = indexConversion(bestPixIndices);
+    compressed2 = 0;
+    compressed2 = (compressed2 & ~((0x2 << 31) - 1)) | (bestPixIndices & ((2 << 31) - 1));
 
     return bestErr;
 }
@@ -3342,7 +3983,8 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     uint64_t d = 0;
     if (d != 0) return d;
 #else
-    uint64_t d = CheckSolid(src);
+    // uint64_t d = CheckSolid(src);
+    uint64_t d = 0;
     if (d != 0) return d;
 #endif
 
@@ -3356,7 +3998,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
         mode = SelectModeETC2(luma);
     }
 
-    auto plane = Planar_AVX2(ch, mode, useHeuristics);
+    auto plane = Planar_AVX2(ch, mode, useHeuristics, isHighError);
     if (useHeuristics && mode == ModePlanar)
     {
         return plane.plane;
@@ -3387,7 +4029,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     // uint64_t errorThreshold = 4609145;
     // uint64_t errorThreshold = 14770000;
     //uint64_t errorThreshold = 9842612;
-    uint64_t errorThreshold = 2373763; // final errorthreshold 
+    //uint64_t errorThreshold = 2373763; // final errorthreshold 
 
     if ((idx == 0) || (idx == 2))
     {
@@ -3407,7 +4049,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
             uint32_t compressed[4] = { 0, 0, 0, 0 };
             bool tMode = false;
 
-            error = compressBlockTH((uint8_t*)src, luma, compressed[0], compressed[1], tMode, ch.r8, ch.g8, ch.b8);
+            error = compressBlockTH((uint8_t*)src, luma, compressed[0], compressed[1], tMode, ch.r8, ch.g8, ch.b8, isHighError);
             if (tMode)
             {
                 stuff59bits(compressed[0], compressed[1], compressed[2], compressed[3]);
@@ -4617,7 +5259,7 @@ void CompressEtc2Rgb(const uint32_t* src, uint64_t* dst, PixBlock *pipeline, int
         *dst = ProcessRGB_ETC2((uint8_t*)buf, useHeuristics, isHighError, errorValue);
         if (isHighError)
         {
-            *dst = 0;
+            // *dst = 0;
 
             int idx = 12;
             for (int i = 0; i < 4; i++) {
@@ -4824,7 +5466,7 @@ void CompressEtc2Rgba(const uint32_t* src, uint64_t* dst, PixBlock* pipeline, in
                 idx -= 4;
             }
 
-            std::vector<unsigned char> buffer;
+            // std::vector<unsigned char> buffer;
             unsigned char pixelBuffer[48];
             divRGBAData((uint8_t*)srcBuffer, pixelBuffer);
             // pipeline->pushPixBlock(dst, errorValue, pixelBuffer);
