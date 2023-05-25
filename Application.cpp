@@ -66,7 +66,10 @@ void Usage()
     fprintf( stderr, "  --disable-heuristics   disable heuristic selector of compression mode\n" );
     fprintf( stderr, "  --dxtc                 use DXT1/DXT5 compression\n" );
     fprintf( stderr, "  --linear               input data is in linear space (disable sRGB conversion for mips)\n" );
-    fprintf( stderr, "  --betsy-mode           execute BetsyGPU Encoding (with Multi-threading Option)\n\n");
+    fprintf( stderr, "  --betsy-mode           execute BetsyGPU Encoding (with Multi-threading Option)\n");
+    fprintf( stderr, "  --fast                 Quality Option Fast mode   (with betsy-mode Option)\n");
+    fprintf( stderr, "  --normal               Qualtiy Option Normal mode (default) (with betsy-mode Option)\n");
+    fprintf( stderr, "  --best                 Qualtiy Option Best mode   (with betsy-mode Option)\n\n");
     fprintf( stderr, "Output file name may be unneeded for some modes.\n" );
 }
 
@@ -100,6 +103,11 @@ int main( int argc, char** argv )
     const char* alpha = nullptr;
     unsigned int cpus = System::CPUCores();
 
+    bool modeBest = false;
+    bool modeNormal = true; // (default Normal mode)
+    bool modeFast = false;
+    float qualityRatio = 0.5; // 50 % 
+
     if( argc < 3 )
     {
         Usage();
@@ -113,7 +121,10 @@ int main( int argc, char** argv )
         OptDxtc,
         OptLinear,
         OptNoHeuristics,
-        OptBetsyMode
+        OptBetsyMode,
+        OptQualityFast,
+        OptQualityNormal,
+        OptQualityBest
     };
 
     struct option longopts[] = {
@@ -123,6 +134,9 @@ int main( int argc, char** argv )
         { "linear", no_argument, nullptr, OptLinear },
         { "disable-heuristics", no_argument, nullptr, OptNoHeuristics },
         { "betsy-mode", no_argument, nullptr, OptBetsyMode },
+        { "fast", no_argument, nullptr, OptQualityFast },
+        { "normal", no_argument, nullptr, OptQualityNormal },
+        { "best", no_argument, nullptr, OptQualityBest },
         {}
     };
 
@@ -173,6 +187,17 @@ int main( int argc, char** argv )
             useHeuristics = false;
         case OptBetsyMode:
             useBetsy = true;
+            break;
+        case OptQualityFast:
+            modeFast = true;
+            modeNormal = false;
+            break;
+        case OptQualityNormal:
+            modeNormal = true;
+            break;
+        case OptQualityBest:
+            modeBest = true;
+            modeNormal = false;
             break;
         default:
             break;
@@ -237,9 +262,23 @@ int main( int argc, char** argv )
         }
     }
     _findclose(handle);
-    // for check file name 
-    //std::cout << "texture count : " << imagePathList.size() << std::endl;
-    //std::cout << "example data : " << imagePathList[2] << std::endl;
+    std::string mode;
+    if (modeFast) // Fast Mode 
+    {
+        mode = "Fast Mode";
+        qualityRatio = 0.3;
+
+    }
+    else if (modeNormal)
+    {
+        mode = "Normal Mode";
+        qualityRatio = 0.6;
+    }
+    else 
+    {
+        mode = "Best Mode";
+        qualityRatio = 1.0;
+    }
 
     if( benchmark )
     {
@@ -381,17 +420,29 @@ int main( int argc, char** argv )
     }
     else if (useBetsy)
     {
+        printf("Use Betsy Mode..\n");
+        std::cout << "Your Selected Mode : " << mode << std::endl << "Qulity Ratio : " << qualityRatio * 100 << "%" << std::endl;
+        
         std::vector<float> timeStamp;
 
         betsy::initBetsyPlatform();
         auto bdg = std::make_shared<BlockDataGPU>();
         auto start = GetTime();
-        bdg->setEncodingEnv();
-        // bdg->initGPU(input);
-        // glFinish();
+        bdg->setEncodingEnv( false );
         auto    end = GetTime();
 
+        int max_compute_work_group_count[3];
+        int max_compute_work_group_size[3];
+        int max_compute_work_group_invocations;
+
+        for (int idx = 0; idx < 3; idx++) {
+            glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, idx, &max_compute_work_group_count[idx]);
+            glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, idx, &max_compute_work_group_size[idx]);
+        }
+        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &max_compute_work_group_invocations);
+
         printf("betsy Init time: %0.3f ms\n", (end - start) / 1000.f);
+
         TaskDispatch taskDispatch(cpus);
         auto errorBlockDataPipeline = std::make_shared<ErrorBlockData>();
         BlockDataPtr priorBd;
@@ -429,6 +480,7 @@ int main( int argc, char** argv )
                 DataProvider dp((inputDir + "/" + imagePathList[t]).c_str(), mipmap, !dxtc, linearize);
                 auto num = dp.NumberOfParts();
                 errorBlockDataPipeline->setNumTasks(num);
+ 
 
                 BlockData::Type type;
                 if (etc2)
@@ -497,7 +549,7 @@ int main( int argc, char** argv )
                 {
                     if (!errorBlockDataPipeline->isEmpty())
                     {
-                        bdg->ProcessWithGPU(errorBlockDataPipeline);
+                        bdg->ProcessWithGPU(errorBlockDataPipeline, max_compute_work_group_size[1]);
                     }
                 }
 
@@ -509,7 +561,7 @@ int main( int argc, char** argv )
                 {
                     if (!errorBlockDataPipeline->isEmpty())
                     {
-                        bdg->ProcessWithGPU(errorBlockDataPipeline);
+                        bdg->ProcessWithGPU(errorBlockDataPipeline, max_compute_work_group_size[1]);
                     }
                     priorBd = nullptr;
                 }
@@ -530,7 +582,7 @@ int main( int argc, char** argv )
             std::cout << "1 image compression average time = " << sum / timeStamp.size() << "ms" << std::endl;
             std::cout << "total image = " << timeStamp.size() << " total time = " << sum << "ms" << std::endl;
         } // target file 
-
+        // target file 
         else
         {
             auto start = GetTime();
@@ -540,7 +592,7 @@ int main( int argc, char** argv )
             printf("Image load time: %0.3f ms\n", (end - start) / 1000.f);
 
             const unsigned int parts = ((bmp->Size().y / 4) + 32 - 1) / 32; // parts = 4
-            
+
             BlockData::Type type;
             Channels channel;
 
@@ -557,7 +609,25 @@ int main( int argc, char** argv )
             auto ptr = bmp->Data();
             const auto width = bmp->Size().x;
             auto linesLeft = bmp->Size().y / 4;
+            uint64_t BUFFER_MAX_SIZE = width * linesLeft;
             size_t offset = 0;
+
+            std::vector<ErrorBlockDataPtr> errPipes;
+            PixBlock* finalPipe = new PixBlock[width * bmp->Size().y];
+            PixBlock** pixelMat = new PixBlock * [parts];
+            int* sizeArr = new int[parts];
+
+            for (int i = 0; i < parts; i++)
+            {
+                pixelMat[i] = new PixBlock[BUFFER_MAX_SIZE];
+                sizeArr[i] = 0;
+            }
+
+            //for (int i = 0; i < parts; i++)
+            //{
+            //    ErrorBlockDataPtr pipe = std::make_shared<ErrorBlockData>();
+            //    errPipes.push_back(pipe);
+            //}
 
             const auto localStart = GetTime();
             if (rgba || type == BlockData::Dxt5)
@@ -565,8 +635,11 @@ int main( int argc, char** argv )
                 for (int j = 0; j < parts; j++)
                 {
                     const auto lines = std::min(32, linesLeft);
-                    taskDispatch.Queue([bd, ptr, width, lines, offset, useHeuristics] {
-                        bd->ProcessRGBA(ptr, width * lines / 4, offset, width, useHeuristics);
+                    auto pPixelMat = pixelMat[j];
+                    auto pSizeArr = &sizeArr[j];
+
+                    taskDispatch.Queue([bd, ptr, width, lines, offset, useHeuristics, pPixelMat, pSizeArr] {
+                        bd->ProcessRGBA(ptr, width * lines / 4, pPixelMat, pSizeArr, offset, width, useHeuristics);
                         });
                     linesLeft -= lines;
                     ptr += width * lines * 4;
@@ -578,22 +651,54 @@ int main( int argc, char** argv )
                 for (int j = 0; j < parts; j++)
                 {
                     const auto lines = std::min(32, linesLeft);
-                    taskDispatch.Queue([bd, ptr, width, lines, offset, channel, dither, useHeuristics, &errorBlockDataPipeline] {
-                        bd->Process(ptr, width * lines / 4, errorBlockDataPipeline, offset, width, channel, dither, useHeuristics);
+                    //ErrorBlockDataPtr pipe = errPipes[j];
+                    auto pPixelMat = pixelMat[j];
+                    auto pSizeArr = &sizeArr[j];
+
+                    taskDispatch.Queue([bd, ptr, width, lines, offset, channel, dither, useHeuristics, pPixelMat, pSizeArr] {
+                        bd->Process(ptr, width * lines / 4, pPixelMat, pSizeArr, offset, width, channel, dither, useHeuristics);
                         });
                     linesLeft -= lines;
                     ptr += width * lines * 4;
                     offset += width * lines / 4;
                 }
             }
-
             taskDispatch.Sync();
-            errorBlockDataPipeline->pushHighErrorBlocks();
-            //-------------------------------------------------------------------------
-            // betsy GPU encoding.
-            bdg->ProcessWithGPU(errorBlockDataPipeline);
+
+            ErrorBlockDataPtr pFpipe = std::make_shared<ErrorBlockData>();
+            //for (int i = 1; i < parts; i++)
+            //{
+            //    errPipes[0]->merge(errPipes[i]->m_pipe);
+            //}
+
+            int finalPipeSize = 0;
+            for (int i = 0; i < parts; i++)
+            {
+                std::memcpy(finalPipe + finalPipeSize, pixelMat[i], sizeArr[i] * sizeof(PixBlock));
+                finalPipeSize += sizeArr[i];
+            }
+
+            //for (int i = 0; i < finalPipeSize; i++)
+            //{
+            //    printf("%d : %d\n",i, finalPipe[i].error);
+            //}
+
+            // betsy GPU encoding. // 3ms =========
+            //bdg->ProcessWithGPU(errPipes[0], max_compute_work_group_size[1]); 
+            // GPU image max size 1024 x 1024 x 64 in opengl Compute shader work group size 
+            bdg->ProcessWithGPU(finalPipe, finalPipeSize, max_compute_work_group_size[0] * max_compute_work_group_size[1], qualityRatio);
             const auto localEnd = GetTime();
-            printf("total encoding time: %0.3f ms\n", (localEnd - localStart) / 1000.f);
+            printf("total encoding time: %0.3f \n", (localEnd - localStart) / 1000.f);
+
+
+            // delete memory 
+            for (int i = 0; i < parts; i++)
+            {
+                delete[] pixelMat[i];
+            }
+
+            delete[] pixelMat;
+            delete[] sizeArr;
         }
     }
     

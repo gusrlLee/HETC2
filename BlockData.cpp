@@ -319,6 +319,55 @@ void BlockData::Process(const uint32_t* src, uint32_t blocks, std::shared_ptr<Er
     }
 }
 
+void BlockData::Process(const uint32_t* src, uint32_t blocks, PixBlock *pipeline, int *pipeSize, size_t offset, size_t width, Channels type, bool dither, bool useHeuristics)
+{
+    auto dst = ((uint64_t*)(m_data + m_dataOffset)) + offset;
+
+    if (type == Channels::Alpha)
+    {
+        if (m_type != Etc1)
+        {
+            CompressEtc2Alpha(src, dst, blocks, width, useHeuristics);
+        }
+        else
+        {
+            CompressEtc1Alpha(src, dst, blocks, width);
+        }
+    }
+    else
+    {
+        switch (m_type)
+        {
+        case Etc1:
+            if (dither)
+            {
+                CompressEtc1RgbDither(src, dst, blocks, width);
+            }
+            else
+            {
+                CompressEtc1Rgb(src, dst, blocks, width);
+            }
+            break;
+        case Etc2_RGB:
+            CompressEtc2Rgb(src, dst, pipeline, pipeSize, blocks, width, useHeuristics); // our input path!
+            break;
+        case Dxt1:
+            if (dither)
+            {
+                CompressDxt1Dither(src, dst, blocks, width);
+            }
+            else
+            {
+                CompressDxt1(src, dst, blocks, width);
+            }
+            break;
+        default:
+            assert(false);
+            break;
+        }
+    }
+}
+
 void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset, size_t width, bool useHeuristics )
 {
     auto dst = ((uint64_t*)( m_data + m_dataOffset )) + offset * 2;
@@ -333,6 +382,24 @@ void BlockData::ProcessRGBA( const uint32_t* src, uint32_t blocks, size_t offset
         break;
     default:
         assert( false );
+        break;
+    }
+}
+
+void BlockData::ProcessRGBA(const uint32_t* src, uint32_t blocks, PixBlock* pipeline, int *pipeSize, size_t offset, size_t width, bool useHeuristics)
+{
+    auto dst = ((uint64_t*)(m_data + m_dataOffset)) + offset * 2;
+
+    switch (m_type)
+    {
+    case Etc2_RGBA:
+        CompressEtc2Rgba(src, dst, pipeline, pipeSize, blocks, width, useHeuristics);
+        break;
+    case Dxt5:
+        CompressDxt5(src, dst, blocks, width);
+        break;
+    default:
+        assert(false);
         break;
     }
 }

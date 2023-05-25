@@ -169,7 +169,7 @@ namespace betsy
 
 
 		FIBITMAP* bitmap = FreeImage_Allocate(block_width, block_height, block_channel);
-		FIBITMAP* fiBitmap = FreeImage_ConvertFromRawBits(image_block, block_width, block_height, block_width * block_channel, 8 * block_channel, 0, 0, 0, false);
+		FIBITMAP* fiBitmap = FreeImage_ConvertFromRawBits(image_block, block_width, block_height, block_width * block_channel, 8 * block_channel, 0, 0, 0, true);
 		if (fiBitmap == NULL)
 		{
 			fprintf(stderr, "Failed to make block image\n");

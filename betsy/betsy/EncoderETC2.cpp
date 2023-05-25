@@ -143,6 +143,7 @@ namespace betsy
 		bindUav(0u, m_pModeTargetRes, PFG_RG32_UINT, ResourceAccess::Write);
 		bindUav(1u, m_pModeError, PFG_R32_FLOAT, ResourceAccess::Write);
 		bindComputePso(m_pModePso);
+
 		glDispatchCompute(alignToNextMultiple(m_width, 8u) / 8u,
 			alignToNextMultiple(m_height, 8u) / 8u, 1u);
 	}

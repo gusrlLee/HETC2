@@ -50,7 +50,9 @@ public:
 
 	void initGPU(const char* input);
 	void setEncodingEnv();
-	void ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline);
+	void setEncodingEnv(bool alpha);
+	void ProcessWithGPU( std::shared_ptr<ErrorBlockData> pipeline, uint64_t limit);
+	void ProcessWithGPU(PixBlock *pipeline, int pipeSize, uint64_t limit, float quality);
 
 private:
 	size_t m_Repeat;
