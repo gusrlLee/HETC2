@@ -106,7 +106,7 @@ int main( int argc, char** argv )
     bool modeBest = false;
     bool modeNormal = true; // (default Normal mode)
     bool modeFast = false;
-    float qualityRatio = 0.5; // 50 % 
+    float qualityRatio = 0.7; // 70 % 
 
     if( argc < 3 )
     {
@@ -272,7 +272,7 @@ int main( int argc, char** argv )
     else if (modeNormal)
     {
         mode = "Normal Mode";
-        qualityRatio = 0.6;
+        qualityRatio = 0.7;
     }
     else 
     {

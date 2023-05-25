@@ -1226,12 +1226,10 @@ static etcpak_force_inline Plane Planar_AVX2(const Channels& ch, uint8_t& mode, 
 
     // add hyeon
     // =========================================================================================
-    // ���� ����.
     rdif = _mm256_abs_epi16(rdif);
     gdif = _mm256_abs_epi16(gdif);
     bdif = _mm256_abs_epi16(bdif);
 
-    // �� pixel ���� ���ϱ� ����, 16 array�� ����.
     alignas(8) uint8_t redError[16];
     alignas(8) uint8_t blueError[16];
     alignas(8) uint8_t greenError[16];
@@ -1404,8 +1402,8 @@ static etcpak_force_inline void  RecalculateError(uint64_t& terr, const uint32_t
 #else
         // origin
         // int64_t err = abs(dr + tab[j]) * 38 + abs(dg + tab[j]) * 76 + abs(db + tab[j]) * 14;
-        int64_t err = abs(dr + tab[j]) * 38 > abs(dg + tab[j]) * 76 ? abs(dr + tab[j]) * 38 : abs(dg + tab[j]) * 76;
-        err = err > abs(db + tab[j]) * 14 ? err : abs(db + tab[j]) * 14;
+        int64_t err = abs(dr + tab[j]) > abs(dg + tab[j]) ? abs(dr + tab[j]) : abs(dg + tab[j]);
+        err = err > abs(db + tab[j]) ? err : abs(db + tab[j]);
         err *= 128;
 #endif
         terr += err * err;
