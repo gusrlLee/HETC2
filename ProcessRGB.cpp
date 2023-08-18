@@ -1044,7 +1044,7 @@ static etcpak_force_inline Plane Planar_AVX2(const Channels& ch, uint8_t& mode, 
 }
 
 
-static etcpak_force_inline Plane Planar_AVX2(const Channels& ch, uint8_t& mode, bool useHeuristics, bool& isHighError)
+static etcpak_force_inline Plane Planar_AVX2(const Channels& ch, uint8_t& mode, bool useHeuristics, bool& isHighError, uint64_t &errorValue)
 {
     __m128i t0 = _mm_sad_epu8(ch.r8, _mm_setzero_si128());
     __m128i t1 = _mm_sad_epu8(ch.g8, _mm_setzero_si128());
@@ -1277,6 +1277,7 @@ static etcpak_force_inline Plane Planar_AVX2(const Channels& ch, uint8_t& mode, 
     //printf("%llu\n", terr);
     if (terr > errorThreshold) 
     {
+        errorValue = terr;
         isHighError = true;
     }
 
@@ -2735,7 +2736,7 @@ uint32_t calculateErrorTH( bool tMode, uint8_t* src, uint8_t( colorsRGB444 )[2][
     return bestBlockErr;
 }
 
-uint32_t calculateErrorTH(bool tMode, uint8_t(colorsRGB444)[2][3], uint8_t& dist, uint32_t& pixIndices, uint8_t startDist, __m128i r8, __m128i g8, __m128i b8, bool &isHighError)
+uint32_t calculateErrorTH(bool tMode, uint8_t(colorsRGB444)[2][3], uint8_t& dist, uint32_t& pixIndices, uint8_t startDist, __m128i r8, __m128i g8, __m128i b8, bool &isHighError, uint64_t &errorValue)
 
 {
     uint32_t blockErr = 0, bestBlockErr = MaxError;
@@ -2881,6 +2882,7 @@ uint32_t calculateErrorTH(bool tMode, uint8_t(colorsRGB444)[2][3], uint8_t& dist
     uint32_t recalcError = ReCalcErrorTH(bestPossibleColors, pixIndices, r8, g8, b8);
     if (recalcError > errorThreshold)
     {
+        errorValue = recalcError;
         isHighError = true;
     }
     //printf("%llu\n", recalcError);
@@ -3111,7 +3113,7 @@ uint32_t compressBlockTH( uint8_t *src, Luma& l, uint32_t& compressed1, uint32_t
 //#endif
 
 // main T-/H-mode compression function
-uint32_t compressBlockTH(uint8_t* src, Luma& l, uint32_t& compressed1, uint32_t& compressed2, bool& tMode, __m128i r8, __m128i g8, __m128i b8, bool &isHighError)
+uint32_t compressBlockTH(uint8_t* src, Luma& l, uint32_t& compressed1, uint32_t& compressed2, bool& tMode, __m128i r8, __m128i g8, __m128i b8, bool &isHighError, uint64_t &errorValue)
 
 {
 #ifdef __AVX2__
@@ -3282,7 +3284,7 @@ uint32_t compressBlockTH(uint8_t* src, Luma& l, uint32_t& compressed1, uint32_t&
     // 6) finds the best candidate with the lowest error
 #ifdef __AVX2__
     // Vectorized ver
-    bestErr = calculateErrorTH(tMode, colorsRGB444, bestDist, bestPixIndices, startDistCandidate, r8, g8, b8, isHighError);
+    bestErr = calculateErrorTH(tMode, colorsRGB444, bestDist, bestPixIndices, startDistCandidate, r8, g8, b8, isHighError, errorValue);
 #else
     // Scalar ver
     bestErr = calculateErrorTH(tMode, src, colorsRGB444, bestDist, bestPixIndices, startDistCandidate);
@@ -3996,7 +3998,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
         mode = SelectModeETC2(luma);
     }
 
-    auto plane = Planar_AVX2(ch, mode, useHeuristics, isHighError);
+    auto plane = Planar_AVX2(ch, mode, useHeuristics, isHighError, errorValue);
     if (useHeuristics && mode == ModePlanar)
     {
         return plane.plane;
@@ -4029,7 +4031,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
     // uint64_t errorThreshold = 4609145;
     // uint64_t errorThreshold = 14770000;
     //uint64_t errorThreshold = 9842612;
-    //uint64_t errorThreshold = 2373763; // final errorthreshold 
+    //uint64_t errorThreshold = 2373763;
 
     if ((idx == 0) || (idx == 2))
     {
@@ -4049,7 +4051,7 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
             uint32_t compressed[4] = { 0, 0, 0, 0 };
             bool tMode = false;
 
-            error = compressBlockTH((uint8_t*)src, luma, compressed[0], compressed[1], tMode, ch.r8, ch.g8, ch.b8, isHighError);
+            error = compressBlockTH((uint8_t*)src, luma, compressed[0], compressed[1], tMode, ch.r8, ch.g8, ch.b8, isHighError, errorValue);
             if (tMode)
             {
                 stuff59bits(compressed[0], compressed[1], compressed[2], compressed[3]);
@@ -4072,11 +4074,10 @@ static etcpak_force_inline uint64_t ProcessRGB_ETC2(const uint8_t* src, bool use
         }
     }
 
-    if (plane.error > errorThreshold && plane.error != MaxError) {
-        // printf("error = %lld\n", plane.error); // for error check
-        isHighError = true;
-        errorValue = plane.error;
-    }
+    //if (plane.error > errorThreshold && plane.error != MaxError) {
+    //    isHighError = true;
+    //    errorValue = plane.error;
+    //}
     auto id = g_id[idx];
 
     return EncodeSelectors_AVX2(d, terr, tsel, (idx % 2) == 1, plane.plane, plane.error, isHighError, a, id, src, errorValue);

@@ -106,7 +106,7 @@ int main( int argc, char** argv )
     bool modeBest = false;
     bool modeNormal = true; // (default Normal mode)
     bool modeFast = false;
-    float qualityRatio = 0.7; // 70 % 
+    float qualityRatio = 0.4; // 70 % 
 
     if( argc < 3 )
     {
@@ -266,13 +266,13 @@ int main( int argc, char** argv )
     if (modeFast) // Fast Mode 
     {
         mode = "Fast Mode";
-        qualityRatio = 0.3;
+        qualityRatio = 0.1;
 
     }
     else if (modeNormal)
     {
         mode = "Normal Mode";
-        qualityRatio = 0.7;
+        qualityRatio = 0.4;
     }
     else 
     {
@@ -686,6 +686,7 @@ int main( int argc, char** argv )
             // betsy GPU encoding. // 3ms =========
             //bdg->ProcessWithGPU(errPipes[0], max_compute_work_group_size[1]); 
             // GPU image max size 1024 x 1024 x 64 in opengl Compute shader work group size 
+            std::cout << "finalPipeSize = " << finalPipeSize << std::endl;
             bdg->ProcessWithGPU(finalPipe, finalPipeSize, max_compute_work_group_size[0] * max_compute_work_group_size[1], qualityRatio);
             const auto localEnd = GetTime();
             printf("total encoding time: %0.3f \n", (localEnd - localStart) / 1000.f);
