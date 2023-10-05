@@ -1,3 +1,16 @@
+# A Note from hyeon-ki Lee  
+The H-ETC2 code provided here is a modified version based on the following article : Hyeon-ki Lee, jae-ho Nah, “H-ETC2 : Design of a CPU-GPU Hybird ETC2 Encoder”  
+You want to execute our encoder :  
+```bash
+./etcpak —betsy-mode -M —[MODE] [INPUT].png [OUTPUT].ktx
+```
+
+[MODE]  
+- fast
+- normal
+- best
+
+
 # etcpak 1.0 #
 (Updated 2022-06-04)
 start dev
