@@ -1,15 +1,38 @@
 # A Note from hyeon-ki Lee  
 The H-ETC2 code provided here is a modified version based on the following article : Hyeon-ki Lee, jae-ho Nah, “H-ETC2 : Design of a CPU-GPU Hybird ETC2 Encoder”  
-You want to execute our encoder :  
+This encoder is built upon etcpak and Betsy.  
+By passing mode as argument to encoder, input image is processed by CPU encoder and GPU encoder according to mode arguments.  
+The CPU encoder is focused on fast encoding speed and the GPU encoder is focused on encoding quality.  
+
+# Get started  
+
+First, we have to build Betsy and etcpak.
+  - [etcpak](https://github.com/wolfpld/etcpak)
+  - [BetsyGPU](https://github.com/darksylinc/betsy)
+  - Our project  
+  
+Second, copy ```SDL2.dll``` in betsyGPU project build folder to our project build folder. **because our project is required ```SDL2.dll```.**  
+
 ```bash
-./etcpak —betsy-mode -M —[MODE] [INPUT].png [OUTPUT].ktx
+$ YOUR_HETC2_PROJECT_PATH/build/x64 ls 
+    ..
+    etcpak.exe
+    SDL2.dll
+```  
+- Third, if you want to execute encoder, you have to input below command line.
+```bash
+$ ./etcpak --betsy-mode -M --[MODE] [INPUT].png [OUTPUT].ktx
+```  
+
+example
+```bash 
+$ ./etcpak --betsy-mode -M --best ./example.png ./example.ktx
 ```
 
-[MODE]  
-- fast
-- normal
-- best
-
+if you want to uncompression,
+```bash
+$ ./etcpak -v example.ktx example.png
+```
 
 # etcpak 1.0 #
 (Updated 2022-06-04)
