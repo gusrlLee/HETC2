@@ -61,6 +61,8 @@ void BlockDataGPU::initGPU(const char* input)
     glFinish(); // wait initResource
 }
 
+
+// not use this function
 void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline, uint64_t blockLimit)
 {
     size_t repeat = 1u;
@@ -149,10 +151,7 @@ void BlockDataGPU::ProcessWithGPU(std::shared_ptr<ErrorBlockData> pipeline, uint
 void BlockDataGPU::ProcessWithGPU(PixBlock* pipeline, int pipeSize, uint64_t blockLimit, float quality)
 {
     size_t repeat = 1u;
-    //std::cout << "Pipeline size = " << pipeSize << std::endl;
     uint64_t limit = pipeSize * quality;
-    //std::cout << "Limit = " << limit << std::endl;
-    // limit = (16 * pipeSize) < limit ? pipeSize : limit; // 4ms\
 
     PixBlock* buf = new PixBlock[limit];
     if (quality < 1.0) // Not Bset mode
@@ -210,14 +209,14 @@ void BlockDataGPU::ProcessWithGPU(PixBlock* pipeline, int pipeSize, uint64_t blo
     betsy::CpuImage cpuImage = betsy::CpuImage(GpuImage, gpuImageArraySize, gpuImageWidth, gpuImageHeight, gpuImageChannel);
     m_Encoder.initResources(cpuImage, false, false);
 
-    while (repeat--) // this loop is 13 ms 
+    while (repeat--) 
     {
         m_Encoder.execute00();
         m_Encoder.execute01(static_cast<betsy::EncoderETC1::Etc1Quality>(1)); // setting mid quality
         m_Encoder.execute02();
     }
 
-    //saveToOffData(m_Encoder, "res.ktx");
+    // saveToOffData(m_Encoder, "res.ktx"); // to save mid result 
 
     uint8_t* result = m_Encoder.getDownloadData();
     uint32_t offset = 0u;

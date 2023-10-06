@@ -623,12 +623,6 @@ int main( int argc, char** argv )
                 sizeArr[i] = 0;
             }
 
-            //for (int i = 0; i < parts; i++)
-            //{
-            //    ErrorBlockDataPtr pipe = std::make_shared<ErrorBlockData>();
-            //    errPipes.push_back(pipe);
-            //}
-
             const auto localStart = GetTime();
             if (rgba || type == BlockData::Dxt5)
             {
@@ -651,7 +645,6 @@ int main( int argc, char** argv )
                 for (int j = 0; j < parts; j++)
                 {
                     const auto lines = std::min(32, linesLeft);
-                    //ErrorBlockDataPtr pipe = errPipes[j];
                     auto pPixelMat = pixelMat[j];
                     auto pSizeArr = &sizeArr[j];
 
@@ -666,10 +659,6 @@ int main( int argc, char** argv )
             taskDispatch.Sync();
 
             ErrorBlockDataPtr pFpipe = std::make_shared<ErrorBlockData>();
-            //for (int i = 1; i < parts; i++)
-            //{
-            //    errPipes[0]->merge(errPipes[i]->m_pipe);
-            //}
 
             int finalPipeSize = 0;
             for (int i = 0; i < parts; i++)
@@ -686,10 +675,10 @@ int main( int argc, char** argv )
             // betsy GPU encoding. // 3ms =========
             //bdg->ProcessWithGPU(errPipes[0], max_compute_work_group_size[1]); 
             // GPU image max size 1024 x 1024 x 64 in opengl Compute shader work group size 
-            std::cout << "finalPipeSize = " << finalPipeSize << std::endl;
+            // std::cout << "finalPipeSize = " << finalPipeSize << std::endl;
             bdg->ProcessWithGPU(finalPipe, finalPipeSize, max_compute_work_group_size[0] * max_compute_work_group_size[1], qualityRatio);
             const auto localEnd = GetTime();
-            printf("total encoding time: %0.3f \n", (localEnd - localStart) / 1000.f);
+            printf("total encoding time: %0.3f ms\n", (localEnd - localStart) / 1000.f);
 
 
             // delete memory 
