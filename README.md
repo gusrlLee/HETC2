@@ -12,27 +12,27 @@ First, we have to build Betsy and etcpak.
   - [BetsyGPU](https://github.com/darksylinc/betsy)
   - Our project  
   
-Second, copy ```SDL2.dll``` in a betsyGPU project build folder to our project build folder. **because our project requires ```SDL2.dll```.**  
+Second, copy ```SDL2.dll``` in a betsyGPU project build folder to our project build folder **because our project requires ```SDL2.dll```.**  
 
 ```bash
-$ YOUR_HETC2_PROJECT_PATH/build/x64 ls 
+C:\YOUR_HETC2_PROJECT_PATH\build\x64> dir 
     ..
     etcpak.exe
     SDL2.dll
 ```  
 - Third, if you want to execute the encoder, you need to input the below command line.
 ```bash
-$ ./etcpak --betsy-mode -M --[MODE] [INPUT].png [OUTPUT].ktx
+C:\YOUR_HETC2_PROJECT_PATH\build\x64> etcpak --betsy-mode -M --[MODE] [INPUT].png [OUTPUT].ktx
 ```  
 
 Example
 ```bash 
-$ ./etcpak --betsy-mode -M --best ./example.png ./example.ktx
+C:\YOUR_HETC2_PROJECT_PATH\build\x64> etcpak --betsy-mode -M --best example.png example.ktx
 ```
 
-If you want to uncompress a file, please input below.
+If you want to uncompress a file, please input below; it is the same as the usage of the original etcpak.
 ```bash
-$ ./etcpak -v example.ktx example.png
+C:\YOUR_HETC2_PROJECT_PATH\build\x64> etcpak -v example.ktx example.png
 ```
 
 # etcpak 1.0 #
