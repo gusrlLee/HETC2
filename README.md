@@ -1,5 +1,5 @@
-# A Note from hyeon-ki Lee  
-The H-ETC2 code provided here is a modified version based on the following article : Hyeon-ki Lee and Jae-ho Nah, “H-ETC2 : Design of a CPU-GPU Hybird ETC2 Encoder,” 
+# A Note from Hyeon-ki Lee  
+The H-ETC2 code provided here is a modified version of etcpak 1.0, based on the following article: Hyeon-ki Lee and Jae-ho Nah, “H-ETC2 : Design of a CPU-GPU Hybird ETC2 Encoder,” Computer Graphics Forum (Proc. of Pacific Graphics 2023).
 https://diglib.eg.org/handle/10.1111/cgf14969
 
 This encoder is built upon etcpak and Betsy.
