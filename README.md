@@ -19,8 +19,9 @@ C:\YOUR_HETC2_PROJECT_PATH\build\x64> dir
     ..
     etcpak.exe
     SDL2.dll
-```  
-- Third, if you want to execute the encoder, you need to input the below command line.
+```
+
+Third, if you want to execute the encoder, you need to input the below command line.
 ```bash
 C:\YOUR_HETC2_PROJECT_PATH\build\x64> etcpak --betsy-mode -M --[MODE] [INPUT].png [OUTPUT].ktx
 ```  
