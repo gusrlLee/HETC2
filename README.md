@@ -1,5 +1,5 @@
 # A Note from Hyeon-ki Lee  
-The H-ETC2 code provided here is a modified version of etcpak 1.0, based on the following article: Hyeon-ki Lee and Jae-ho Nah, “H-ETC2 : Design of a CPU-GPU Hybird ETC2 Encoder,” Computer Graphics Forum (Proc. of Pacific Graphics 2023).
+The H-ETC2 code provided here is a modified version of etcpak 1.0, based on the following article: Hyeon-ki Lee and Jae-ho Nah, “H-ETC2 : Design of a CPU-GPU Hybrid ETC2 Encoder,” Computer Graphics Forum (Proc. of Pacific Graphics 2023).
 https://diglib.eg.org/handle/10.1111/cgf14969
 
 This encoder is built upon etcpak and Betsy.
@@ -7,10 +7,9 @@ The CPU and GPU encoding parts focus on encoding speed and quality, respectively
 By setting proper modes in the argument list as described in the below section, an input image can be compressed with our CPU/GPU hybrid encoding mode.  
 
 # Get started (Windows only)
-First, we have to build Betsy and etcpak.
+First, we have to build our project including Betsy and etcpak.
   - [etcpak](https://github.com/wolfpld/etcpak)
   - [BetsyGPU](https://github.com/darksylinc/betsy)
-  - Our project  
   
 Second, copy ```SDL2.dll``` in a betsyGPU project build folder to our project build folder **because our project requires ```SDL2.dll```.**  
 
